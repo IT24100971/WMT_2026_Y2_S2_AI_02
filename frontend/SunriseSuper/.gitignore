@@ -1,7 +1,6 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# Dependencies
 node_modules/
+package-lock.json
 
 # Expo
 .expo/
@@ -21,7 +20,7 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
-# debug
+# Debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
@@ -30,27 +29,19 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# Local env files
 .env*.local
 
-# typescript
+# TypeScript
 *.tsbuildinfo
 
-# generated native folders
+# Generated native folders
 /ios
 /android
 
-# ========== ADD THESE LINES ==========
-
-# Backend related (if you accidentally copy backend files)
-../backend/node_modules/
-../backend/.env
-../backend/uploads/
-
-# Environment variables
+# Environment
 .env
 .env.local
-.env.production
 
 # Logs
 logs/
@@ -60,7 +51,7 @@ logs/
 Thumbs.db
 Desktop.ini
 
-# IDE files
+# IDE
 .vscode/
 .idea/
 
