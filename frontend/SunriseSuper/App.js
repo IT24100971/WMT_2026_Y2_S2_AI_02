@@ -1,61 +1,41 @@
-﻿import React from 'react';
+﻿// App.js
+// Main navigation file. Controls which screens are shown.
+// Changes from original: replaced ProductsScreen placeholder with real screens,
+// and added AddProduct + EditProduct to the AppStack navigator.
+
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { View, Text } from 'react-native';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+
+// Auth screens (already built by group)
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
 
-// Temporary placeholder screens for each module
-// Each student will replace these with their full implementation
-const PlaceholderScreen = ({ title }) => {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
-      <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#ff6b00', marginBottom: 20 }}>
-        {title}
-      </Text>
-      <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', paddingHorizontal: 40 }}>
-        This module is under development.
-      </Text>
-      <Text style={{ fontSize: 14, color: '#999', marginTop: 20 }}>
-        Student implementation coming soon!
-      </Text>
-    </View>
-  );
-};
+// ── YOUR SCREENS (Student 1 — Products) ──────────────────
+import ProductListScreen from './src/screens/products/ProductListScreen';
+import AddProductScreen from './src/screens/products/AddProductScreen';
+import EditProductScreen from './src/screens/products/EditProductScreen';
+// ─────────────────────────────────────────────────────────
 
-// Import View and Text for placeholder
-import { View, Text } from 'react-native';
+// Placeholder for other students' modules (they will replace these)
+const PlaceholderScreen = ({ title }) => (
+  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
+    <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#ff6b00', marginBottom: 20 }}>{title}</Text>
+    <Text style={{ fontSize: 16, color: '#666', textAlign: 'center', paddingHorizontal: 40 }}>
+      This module is under development.
+    </Text>
+    <Text style={{ fontSize: 14, color: '#999', marginTop: 20 }}>Student implementation coming soon!</Text>
+  </View>
+);
 
-// Student 1 - Product Management
-function ProductsScreen() {
-  return <PlaceholderScreen title="📦 Product Management" />;
-}
-
-// Student 2 - Inventory Management
-function InventoryScreen() {
-  return <PlaceholderScreen title="📊 Inventory Management" />;
-}
-
-// Student 3 - Supplier Management
-function SuppliersScreen() {
-  return <PlaceholderScreen title="🏢 Supplier Management" />;
-}
-
-// Student 4 - Shift Management
-function ShiftsScreen() {
-  return <PlaceholderScreen title="⏰ Shift Management" />;
-}
-
-// Student 5 - Complaint Management
-function ComplaintsScreen() {
-  return <PlaceholderScreen title="⚠️ Complaint Management" />;
-}
-
-// Student 6 - GRN Management
-function GRNScreen() {
-  return <PlaceholderScreen title="📄 GRN Management" />;
-}
+function InventoryScreen() { return <PlaceholderScreen title="📊 Inventory Management" />; }
+function SuppliersScreen() { return <PlaceholderScreen title="🏢 Supplier Management" />; }
+function ShiftsScreen() { return <PlaceholderScreen title="⏰ Shift Management" />; }
+function ComplaintsScreen() { return <PlaceholderScreen title="⚠️ Complaint Management" />; }
+function GRNScreen() { return <PlaceholderScreen title="📄 GRN Management" />; }
 
 const Stack = createStackNavigator();
 
@@ -70,15 +50,35 @@ function AuthStack() {
 
 function AppStack() {
   return (
-    <Stack.Navigator 
-      screenOptions={{ 
+    <Stack.Navigator
+      screenOptions={{
         headerStyle: { backgroundColor: '#ff6b00' },
         headerTintColor: '#fff',
-        headerTitleStyle: { fontWeight: 'bold' }
+        headerTitleStyle: { fontWeight: 'bold' },
       }}
     >
+      {/* Home */}
       <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Sunrise Super' }} />
-      <Stack.Screen name="Products" component={ProductsScreen} options={{ title: 'Product Management' }} />
+
+      {/* ── YOUR SCREENS ─────────────────────────────────── */}
+      <Stack.Screen
+        name="Products"
+        component={ProductListScreen}
+        options={{ title: 'Product Management' }}
+      />
+      <Stack.Screen
+        name="AddProduct"
+        component={AddProductScreen}
+        options={{ title: 'Add New Product' }}
+      />
+      <Stack.Screen
+        name="EditProduct"
+        component={EditProductScreen}
+        options={{ title: 'Edit Product' }}
+      />
+      {/* ─────────────────────────────────────────────────── */}
+
+      {/* Other students' screens (placeholders for now) */}
       <Stack.Screen name="Inventory" component={InventoryScreen} options={{ title: 'Inventory Management' }} />
       <Stack.Screen name="Suppliers" component={SuppliersScreen} options={{ title: 'Supplier Management' }} />
       <Stack.Screen name="Shifts" component={ShiftsScreen} options={{ title: 'Shift Management' }} />

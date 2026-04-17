@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-export const BASE_URL = process.env.API_URL;
+export const BASE_URL = 'http://192.168.1.12:5000/api';
 
 const AuthContext = createContext();
 
