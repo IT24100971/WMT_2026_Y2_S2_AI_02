@@ -1,0 +1,237 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View, Text, StyleSheet, TextInput, TouchableOpacity,
+  ScrollView, Alert, ActivityIndicator
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from '../../context/AuthContext';
+
+export default function AddInventoryScreen({ navigation }) {
+  const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showProductList, setShowProductList] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
+
+  const [currentStock, setCurrentStock] = useState('');
+  const [reorderLevel, setReorderLevel] = useState('');
+  const [maxStock, setMaxStock] = useState('');
+  const [warehouseLocation, setWarehouseLocation] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const res = await fetch(`${BASE_URL}/products`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        setProducts(data);
+      } catch {
+        Alert.alert('Error', 'Failed to load products');
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const filteredProducts = products.filter(p =>
+    p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    p.barcode?.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  const validate = () => {
+    if (!selectedProduct) return 'Please select a product';
+    if (!currentStock) return 'Current stock is required';
+    if (isNaN(currentStock) || Number(currentStock) < 0) return 'Stock must be a non-negative number';
+    if (!reorderLevel) return 'Reorder level is required';
+    if (isNaN(reorderLevel) || Number(reorderLevel) < 0) return 'Reorder level must be a non-negative number';
+    if (!maxStock) return 'Max stock is required';
+    if (isNaN(maxStock) || Number(maxStock) < 0) return 'Max stock must be a non-negative number';
+    if (Number(currentStock) > Number(maxStock)) return 'Current stock cannot exceed max stock';
+    return null;
+  };
+
+  const handleCreate = async () => {
+    const error = validate();
+    if (error) return Alert.alert('Validation Error', error);
+
+    setLoading(true);
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const body = {
+        productId: selectedProduct._id,
+        currentStock: Number(currentStock),
+        reorderLevel: Number(reorderLevel),
+        maxStock: Number(maxStock),
+        warehouseLocation,
+        expiryDate: expiryDate || undefined,
+      };
+
+      const res = await fetch(`${BASE_URL}/inventory`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Creation failed');
+
+      Alert.alert('Success', 'Inventory record created!', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (err) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+      <Text style={styles.sectionTitle}>Inventory Details</Text>
+
+      <Text style={styles.label}>Product <Text style={styles.required}>*</Text></Text>
+      <TouchableOpacity
+        style={styles.selector}
+        onPress={() => setShowProductList(!showProductList)}
+      >
+        <Text style={selectedProduct ? styles.selectorText : styles.selectorPlaceholder}>
+          {selectedProduct ? selectedProduct.name : 'Select a product...'}
+        </Text>
+        <Text style={styles.selectorArrow}>{showProductList ? '▲' : '▼'}</Text>
+      </TouchableOpacity>
+
+      {showProductList && (
+        <View style={styles.dropdown}>
+          <TextInput
+            style={styles.dropdownSearch}
+            placeholder="Search products..."
+            value={productSearch}
+            onChangeText={setProductSearch}
+            placeholderTextColor="#999"
+          />
+          {filteredProducts.map(p => (
+            <TouchableOpacity
+              key={p._id}
+              style={styles.dropdownItem}
+              onPress={() => {
+                setSelectedProduct(p);
+                setShowProductList(false);
+                setProductSearch('');
+              }}
+            >
+              <Text style={styles.dropdownItemName}>{p.name}</Text>
+              <Text style={styles.dropdownItemSub}>{p.barcode} • {p.category}</Text>
+            </TouchableOpacity>
+          ))}
+          {filteredProducts.length === 0 && (
+            <Text style={styles.noResults}>No products found</Text>
+          )}
+        </View>
+      )}
+
+      <View style={styles.row}>
+        <View style={styles.halfField}>
+          <Text style={styles.label}>Current Stock <Text style={styles.required}>*</Text></Text>
+          <TextInput
+            style={styles.input}
+            value={currentStock}
+            onChangeText={setCurrentStock}
+            keyboardType="numeric"
+            placeholder="0"
+            placeholderTextColor="#bbb"
+          />
+        </View>
+        <View style={styles.halfField}>
+          <Text style={styles.label}>Reorder Level <Text style={styles.required}>*</Text></Text>
+          <TextInput
+            style={styles.input}
+            value={reorderLevel}
+            onChangeText={setReorderLevel}
+            keyboardType="numeric"
+            placeholder="0"
+            placeholderTextColor="#bbb"
+          />
+        </View>
+      </View>
+
+      <Text style={styles.label}>Max Stock <Text style={styles.required}>*</Text></Text>
+      <TextInput
+        style={styles.input}
+        value={maxStock}
+        onChangeText={setMaxStock}
+        keyboardType="numeric"
+        placeholder="Enter max stock quantity"
+        placeholderTextColor="#bbb"
+      />
+
+      <Text style={styles.label}>Warehouse Location</Text>
+      <TextInput
+        style={styles.input}
+        value={warehouseLocation}
+        onChangeText={setWarehouseLocation}
+        placeholder="e.g. Aisle 3, Shelf B"
+        placeholderTextColor="#bbb"
+      />
+
+      <Text style={styles.label}>Expiry Date (Optional)</Text>
+      <TextInput
+        style={styles.input}
+        value={expiryDate}
+        onChangeText={setExpiryDate}
+        placeholder="YYYY-MM-DD"
+        placeholderTextColor="#bbb"
+      />
+
+      <TouchableOpacity
+        style={[styles.createBtn, loading && { opacity: 0.7 }]}
+        onPress={handleCreate}
+        disabled={loading}
+      >
+        {loading
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.createBtnText}>Create Inventory Record</Text>
+        }
+      </TouchableOpacity>
+
+      <View style={{ height: 40 }} />
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
+  sectionTitle: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', marginBottom: 20 },
+  label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6, marginTop: 14 },
+  required: { color: '#F97316' },
+  input: {
+    backgroundColor: '#f7f7f7', borderRadius: 10, paddingHorizontal: 14,
+    paddingVertical: 12, fontSize: 15, color: '#1a1a1a',
+    borderWidth: 1, borderColor: '#e0e0e0'
+  },
+  row: { flexDirection: 'row', gap: 12 },
+  halfField: { flex: 1 },
+  selector: {
+    backgroundColor: '#f7f7f7', borderRadius: 10, paddingHorizontal: 14,
+    paddingVertical: 14, borderWidth: 1, borderColor: '#e0e0e0',
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'
+  },
+  selectorText: { fontSize: 15, color: '#1a1a1a' },
+  selectorPlaceholder: { fontSize: 15, color: '#bbb' },
+  selectorArrow: { color: '#F97316', fontWeight: '700' },
+  dropdown: {
+    backgroundColor: '#fff', borderRadius: 10, borderWidth: 1,
+    borderColor: '#e0e0e0', marginTop: 4, maxHeight: 220, overflow: 'hidden', elevation: 4
+  },
+  dropdownSearch: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', fontSize: 14, color: '#333' },
+  dropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
+  dropdownItemName: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  dropdownItemSub: { fontSize: 12, color: '#888', marginTop: 2 },
+  noResults: { padding: 14, color: '#aaa', textAlign: 'center' },
+  createBtn: { backgroundColor: '#F97316', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
+  createBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+});
