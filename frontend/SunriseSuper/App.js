@@ -20,6 +20,11 @@ import AddProductScreen from './src/screens/products/AddProductScreen';
 import EditProductScreen from './src/screens/products/EditProductScreen';
 // ─────────────────────────────────────────────────────────
 
+// ── YOUR SCREENS (Student 2— Inventory)──────────
+import InventoryListScreen from './src/screens/inventory/InventoryListScreen';
+import AddInventoryScreen  from './src/screens/inventory/AddInventoryScreen';
+import EditStockScreen     from './src/screens/inventory/EditStockScreen';
+
 // Placeholder for other students' modules (they will replace these)
 const PlaceholderScreen = ({ title }) => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
@@ -79,7 +84,36 @@ function AppStack() {
       {/* ─────────────────────────────────────────────────── */}
 
       {/* Other students' screens (placeholders for now) */}
-      <Stack.Screen name="Inventory" component={InventoryScreen} options={{ title: 'Inventory Management' }} />
+      <Stack.Screen
+  name="Inventory"
+  component={InventoryListScreen}
+  options={{
+    title: 'Inventory Management',
+    headerStyle: { backgroundColor: '#F97316' },
+    headerTintColor: '#fff',
+    headerTitleStyle: { fontWeight: '700' },
+  }}
+/>
+<Stack.Screen
+  name="AddInventory"
+  component={AddInventoryScreen}
+  options={{
+    title: 'Add Inventory Record',
+    headerStyle: { backgroundColor: '#F97316' },
+    headerTintColor: '#fff',
+    headerTitleStyle: { fontWeight: '700' },
+  }}
+/>
+<Stack.Screen
+  name="EditStock"
+  component={EditStockScreen}
+  options={{
+    title: 'Edit Stock',
+    headerStyle: { backgroundColor: '#F97316' },
+    headerTintColor: '#fff',
+    headerTitleStyle: { fontWeight: '700' },
+  }}
+/>
       <Stack.Screen name="Suppliers" component={SuppliersScreen} options={{ title: 'Supplier Management' }} />
       <Stack.Screen name="Shifts" component={ShiftsScreen} options={{ title: 'Shift Management' }} />
       <Stack.Screen name="Complaints" component={ComplaintsScreen} options={{ title: 'Complaint Management' }} />
