@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../context/AuthContext';
+import * as Linking from 'expo-linking';
 
 const STATUS_COLORS = {
   'In Stock':     { bg: '#e6f4ea', text: '#2e7d32' },
@@ -108,6 +109,20 @@ export default function InventoryListScreen({ navigation }) {
             🗓  Expires: {new Date(item.expiryDate).toLocaleDateString()}
           </Text>
         )}
+
+        {/* ── Stock Report Button ── */}
+        {item.stockReport && (
+          <TouchableOpacity
+            style={styles.reportBtn}
+            onPress={() => {
+              const url = `${BASE_URL.replace('/api', '')}/${item.stockReport.replace(/\\/g, '/')}`;
+              Linking.openURL(url);
+            }}
+          >
+            <Text style={styles.reportBtnText}>📄  View Stock Report</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.editBtn}
@@ -213,6 +228,11 @@ const styles = StyleSheet.create({
   stockLabel: { fontSize: 11, color: '#999', marginBottom: 2 },
   stockValue: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
   expiry: { fontSize: 12, color: '#888', marginBottom: 8 },
+  reportBtn: {
+    backgroundColor: '#E3F2FD', borderRadius: 10, paddingVertical: 10,
+    alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#90CAF9'
+  },
+  reportBtnText: { color: '#1565C0', fontWeight: '600', fontSize: 14 },
   actions: { flexDirection: 'row', gap: 10 },
   editBtn: { flex: 1, backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   editBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
