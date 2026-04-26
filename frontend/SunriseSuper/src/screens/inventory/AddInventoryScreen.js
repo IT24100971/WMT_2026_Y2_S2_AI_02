@@ -4,6 +4,7 @@ import {
   ScrollView, Alert, ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
 import { BASE_URL } from '../../context/AuthContext';
 
 export default function AddInventoryScreen({ navigation }) {
@@ -17,6 +18,7 @@ export default function AddInventoryScreen({ navigation }) {
   const [maxStock, setMaxStock] = useState('');
   const [warehouseLocation, setWarehouseLocation] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
+  const [stockReport, setStockReport] = useState(null);  // ← new
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -40,14 +42,30 @@ export default function AddInventoryScreen({ navigation }) {
     p.barcode?.toLowerCase().includes(productSearch.toLowerCase())
   );
 
+  // ── PDF Picker ──
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword',
+               'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled) {
+        setStockReport(result.assets[0]);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to pick document');
+    }
+  };
+
   const validate = () => {
     if (!selectedProduct) return 'Please select a product';
     if (!currentStock) return 'Current stock is required';
     if (isNaN(currentStock) || Number(currentStock) < 0) return 'Stock must be a non-negative number';
     if (!reorderLevel) return 'Reorder level is required';
-    if (isNaN(reorderLevel) || Number(reorderLevel) < 0) return 'Reorder level must be a non-negative number';
+    if (isNaN(reorderLevel) || Number(reorderLevel) < 0) return 'Reorder level must be non-negative';
     if (!maxStock) return 'Max stock is required';
-    if (isNaN(maxStock) || Number(maxStock) < 0) return 'Max stock must be a non-negative number';
+    if (isNaN(maxStock) || Number(maxStock) < 0) return 'Max stock must be non-negative';
     if (Number(currentStock) > Number(maxStock)) return 'Current stock cannot exceed max stock';
     return null;
   };
@@ -59,22 +77,28 @@ export default function AddInventoryScreen({ navigation }) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const body = {
-        productId: selectedProduct._id,
-        currentStock: Number(currentStock),
-        reorderLevel: Number(reorderLevel),
-        maxStock: Number(maxStock),
-        warehouseLocation,
-        expiryDate: expiryDate || undefined,
-      };
+
+      // Use FormData so we can attach the PDF file
+      const formData = new FormData();
+      formData.append('productId', selectedProduct._id);
+      formData.append('currentStock', String(Number(currentStock)));
+      formData.append('reorderLevel', String(Number(reorderLevel)));
+      formData.append('maxStock', String(Number(maxStock)));
+      if (warehouseLocation) formData.append('warehouseLocation', warehouseLocation);
+      if (expiryDate) formData.append('expiryDate', expiryDate);
+      if (stockReport) {
+        formData.append('stockReport', {
+          uri: stockReport.uri,
+          name: stockReport.name,
+          type: stockReport.mimeType || 'application/pdf',
+        });
+      }
 
       const res = await fetch(`${BASE_URL}/inventory`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(body)
+        headers: { Authorization: `Bearer ${token}` },
+        // No Content-Type header — fetch sets it automatically with boundary for FormData
+        body: formData,
       });
 
       const data = await res.json();
@@ -94,6 +118,7 @@ export default function AddInventoryScreen({ navigation }) {
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.sectionTitle}>Inventory Details</Text>
 
+      {/* ── Product Selector ── */}
       <Text style={styles.label}>Product <Text style={styles.required}>*</Text></Text>
       <TouchableOpacity
         style={styles.selector}
@@ -134,58 +159,47 @@ export default function AddInventoryScreen({ navigation }) {
         </View>
       )}
 
+      {/* ── Stock Fields ── */}
       <View style={styles.row}>
         <View style={styles.halfField}>
           <Text style={styles.label}>Current Stock <Text style={styles.required}>*</Text></Text>
-          <TextInput
-            style={styles.input}
-            value={currentStock}
-            onChangeText={setCurrentStock}
-            keyboardType="numeric"
-            placeholder="0"
-            placeholderTextColor="#bbb"
-          />
+          <TextInput style={styles.input} value={currentStock} onChangeText={setCurrentStock}
+            keyboardType="numeric" placeholder="0" placeholderTextColor="#bbb" />
         </View>
         <View style={styles.halfField}>
           <Text style={styles.label}>Reorder Level <Text style={styles.required}>*</Text></Text>
-          <TextInput
-            style={styles.input}
-            value={reorderLevel}
-            onChangeText={setReorderLevel}
-            keyboardType="numeric"
-            placeholder="0"
-            placeholderTextColor="#bbb"
-          />
+          <TextInput style={styles.input} value={reorderLevel} onChangeText={setReorderLevel}
+            keyboardType="numeric" placeholder="0" placeholderTextColor="#bbb" />
         </View>
       </View>
 
       <Text style={styles.label}>Max Stock <Text style={styles.required}>*</Text></Text>
-      <TextInput
-        style={styles.input}
-        value={maxStock}
-        onChangeText={setMaxStock}
-        keyboardType="numeric"
-        placeholder="Enter max stock quantity"
-        placeholderTextColor="#bbb"
-      />
+      <TextInput style={styles.input} value={maxStock} onChangeText={setMaxStock}
+        keyboardType="numeric" placeholder="Enter max stock quantity" placeholderTextColor="#bbb" />
 
       <Text style={styles.label}>Warehouse Location</Text>
-      <TextInput
-        style={styles.input}
-        value={warehouseLocation}
-        onChangeText={setWarehouseLocation}
-        placeholder="e.g. Aisle 3, Shelf B"
-        placeholderTextColor="#bbb"
-      />
+      <TextInput style={styles.input} value={warehouseLocation} onChangeText={setWarehouseLocation}
+        placeholder="e.g. Aisle 3, Shelf B" placeholderTextColor="#bbb" />
 
       <Text style={styles.label}>Expiry Date (Optional)</Text>
-      <TextInput
-        style={styles.input}
-        value={expiryDate}
-        onChangeText={setExpiryDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor="#bbb"
-      />
+      <TextInput style={styles.input} value={expiryDate} onChangeText={setExpiryDate}
+        placeholder="YYYY-MM-DD" placeholderTextColor="#bbb" />
+
+      {/* ── Stock Report Upload ── */}
+      <Text style={styles.label}>Stock Report (Optional)</Text>
+      {stockReport ? (
+        <View style={styles.fileSelected}>
+          <Text style={styles.fileIcon}>📄</Text>
+          <Text style={styles.fileName} numberOfLines={1}>{stockReport.name}</Text>
+          <TouchableOpacity onPress={() => setStockReport(null)}>
+            <Text style={styles.fileRemove}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.uploadBtn} onPress={pickDocument}>
+          <Text style={styles.uploadBtnText}>📎  Attach PDF / DOC</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={[styles.createBtn, loading && { opacity: 0.7 }]}
@@ -232,6 +246,19 @@ const styles = StyleSheet.create({
   dropdownItemName: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
   dropdownItemSub: { fontSize: 12, color: '#888', marginTop: 2 },
   noResults: { padding: 14, color: '#aaa', textAlign: 'center' },
+  // File upload styles
+  uploadBtn: {
+    backgroundColor: '#f7f7f7', borderRadius: 10, paddingVertical: 14,
+    alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0', borderStyle: 'dashed'
+  },
+  uploadBtnText: { fontSize: 14, color: '#555', fontWeight: '500' },
+  fileSelected: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f7ff',
+    borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#b3d4f5', gap: 10
+  },
+  fileIcon: { fontSize: 22 },
+  fileName: { flex: 1, fontSize: 13, color: '#1a1a1a', fontWeight: '500' },
+  fileRemove: { fontSize: 16, color: '#c62828', fontWeight: '700', paddingHorizontal: 4 },
   createBtn: { backgroundColor: '#F97316', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
   createBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
