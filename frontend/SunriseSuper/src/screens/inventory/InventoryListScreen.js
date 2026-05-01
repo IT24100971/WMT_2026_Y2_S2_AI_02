@@ -144,7 +144,7 @@ export default function InventoryListScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#F97316" />
+        <ActivityIndicator size="large" color="#1976d2" />
       </View>
     );
   }
@@ -180,7 +180,7 @@ export default function InventoryListScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => { setRefreshing(true); fetchInventory(); }}
-            tintColor="#F97316"
+            tintColor="#1976d2"
           />
         }
         ListEmptyComponent={<Text style={styles.empty}>No inventory records found.</Text>}
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   },
   filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: '#e0e0e0' },
-  filterChipActive: { backgroundColor: '#F97316' },
+  filterChipActive: { backgroundColor: '#1976d2' },
   filterChipText: { fontSize: 13, color: '#555' },
   filterChipTextActive: { color: '#fff', fontWeight: '600' },
   countText: { fontSize: 13, color: '#777', marginBottom: 8 },
@@ -232,16 +232,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#E3F2FD', borderRadius: 10, paddingVertical: 10,
     alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#90CAF9'
   },
-  reportBtnText: { color: '#1565C0', fontWeight: '600', fontSize: 14 },
+  reportBtnText: { color: '#1976d2', fontWeight: '600', fontSize: 14 },
   actions: { flexDirection: 'row', gap: 10 },
-  editBtn: { flex: 1, backgroundColor: '#1565C0', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  editBtn: { flex: 1, backgroundColor: '#1976d2', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   editBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   deleteBtn: { flex: 1, backgroundColor: '#C62828', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
   deleteBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
   fab: {
     position: 'absolute', right: 20, bottom: 24, width: 56, height: 56,
-    borderRadius: 28, backgroundColor: '#F97316', justifyContent: 'center',
-    alignItems: 'center', elevation: 6, shadowColor: '#F97316', shadowOpacity: 0.4, shadowRadius: 8
+    borderRadius: 28, backgroundColor: '#1976d2', justifyContent: 'center',
+    alignItems: 'center', elevation: 6, shadowColor: '#1976d2', shadowOpacity: 0.4, shadowRadius: 8
   },
   fabText: { color: '#fff', fontSize: 30, fontWeight: '300', lineHeight: 34 },
   empty: { textAlign: 'center', color: '#aaa', marginTop: 40, fontSize: 15 },

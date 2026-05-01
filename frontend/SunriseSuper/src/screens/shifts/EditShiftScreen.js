@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     backgroundColor: '#f5f5f5',
   },
-  optionBtnActive: { backgroundColor: '#ff6b00', borderColor: '#ff6b00' },
+  optionBtnActive: { backgroundColor: '#6A1B9A', borderColor: '#6A1B9A' },
   optionBtnText: { color: '#555', fontSize: 13, fontWeight: '500' },
   optionBtnTextActive: { color: '#fff', fontWeight: '700' },
   fileBox: {
@@ -461,14 +461,14 @@ const styles = StyleSheet.create({
   fileText: { fontSize: 13, color: '#333' },
   filePickBtn: {
     marginTop: 10,
-    backgroundColor: '#1976d2',
+    backgroundColor: '#6A1B9A',
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
   },
   filePickBtnText: { color: '#fff', fontWeight: '700' },
   submitBtn: {
-    backgroundColor: '#2e7d32',
+    backgroundColor: '#6A1B9A',
     padding: 16,
     borderRadius: 10,
     alignItems: 'center',

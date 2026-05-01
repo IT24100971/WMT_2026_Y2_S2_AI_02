@@ -166,13 +166,13 @@ export default function EditStockScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 16 },
   productCard: {
-    backgroundColor: '#fff9f5', borderRadius: 14, padding: 16,
-    marginBottom: 14, borderWidth: 1, borderColor: '#ffe0cc'
+    backgroundColor: '#f0f7ff', borderRadius: 14, padding: 16,
+    marginBottom: 14, borderWidth: 1, borderColor: '#e3f2fd'
   },
   productName: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginBottom: 6 },
   productMeta: { flexDirection: 'row', marginBottom: 4 },
-  categoryBadge: { backgroundColor: '#FFF3E0', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  categoryText: { color: '#F97316', fontSize: 12, fontWeight: '600' },
+  categoryBadge: { backgroundColor: '#E3F2FD', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  categoryText: { color: '#1976d2', fontSize: 12, fontWeight: '600' },
   productSub: { fontSize: 13, color: '#777' },
   statusPreview: {
     borderRadius: 12, padding: 14, marginBottom: 18,
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   statusPreviewValue: { fontSize: 16, fontWeight: '700' },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a', marginBottom: 8 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6, marginTop: 14 },
-  required: { color: '#F97316' },
+  required: { color: '#d32f2f' },
   input: {
     backgroundColor: '#f7f7f7', borderRadius: 10, paddingHorizontal: 14,
     paddingVertical: 12, fontSize: 15, color: '#1a1a1a',
@@ -190,6 +190,6 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', gap: 12 },
   halfField: { flex: 1 },
-  updateBtn: { backgroundColor: '#F97316', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
+  updateBtn: { backgroundColor: '#1976d2', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
   updateBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

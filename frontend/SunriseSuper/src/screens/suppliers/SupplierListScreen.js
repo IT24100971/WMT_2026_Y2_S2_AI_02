@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, TextInput, Linking, Modal
+  ActivityIndicator, Alert, TextInput, Linking,
 } from 'react-native';
 import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
@@ -14,9 +14,6 @@ export default function SupplierListScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchText, setSearchText] = useState('');
-
-  // Delete confirmation modal state
-  const [deleteModal, setDeleteModal] = useState({ visible: false, id: null, name: '' });
   const [deleting, setDeleting] = useState(false);
 
   const fetchSuppliers = async () => {
@@ -38,22 +35,27 @@ export default function SupplierListScreen({ navigation }) {
     }, [])
   );
 
-  const confirmDelete = (id, name) => {
-    setDeleteModal({ visible: true, id, name });
-  };
-
-  const handleDelete = async () => {
+  const handleDelete = async (id) => {
     setDeleting(true);
     try {
-      await axios.delete(`${BASE_URL}/suppliers/${deleteModal.id}`);
-      setSuppliers(prev => prev.filter(s => s._id !== deleteModal.id));
-      setDeleteModal({ visible: false, id: null, name: '' });
+      await axios.delete(`${BASE_URL}/suppliers/${id}`);
+      setSuppliers(prev => prev.filter(s => s._id !== id));
     } catch (err) {
-      setDeleteModal({ visible: false, id: null, name: '' });
       Alert.alert('Error', err.response?.data?.message || 'Failed to delete supplier');
     } finally {
       setDeleting(false);
     }
+  };
+
+  const confirmDelete = (id, name) => {
+    Alert.alert(
+      'Delete Supplier',
+      `Are you sure you want to delete "${name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => handleDelete(id) },
+      ]
+    );
   };
 
   const openDocument = (docPath) => {
@@ -122,6 +124,7 @@ export default function SupplierListScreen({ navigation }) {
           <TouchableOpacity
             style={[styles.actionBtn, styles.deleteBtn]}
             onPress={() => confirmDelete(item._id, item.supplierName)}
+            disabled={deleting}
           >
             <Text style={styles.actionBtnText}>🗑️ Delete</Text>
           </TouchableOpacity>
@@ -152,40 +155,6 @@ export default function SupplierListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Delete Confirmation Modal */}
-      <Modal visible={deleteModal.visible} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalIcon}>🗑️</Text>
-            <Text style={styles.modalTitle}>Delete Supplier</Text>
-            <Text style={styles.modalText}>
-              Are you sure you want to delete{'\n'}
-              <Text style={{ fontWeight: 'bold', color: '#333' }}>"{deleteModal.name}"</Text>?
-              {'\n'}This cannot be undone.
-            </Text>
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalCancelBtn]}
-                onPress={() => setDeleteModal({ visible: false, id: null, name: '' })}
-                disabled={deleting}
-              >
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalBtn, styles.modalDeleteBtn]}
-                onPress={handleDelete}
-                disabled={deleting}
-              >
-                {deleting
-                  ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.modalDeleteText}>Delete</Text>
-                }
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
       <TextInput
         style={styles.searchInput}
         placeholder="🔍 Search by name, email, or contact..."
@@ -231,7 +200,6 @@ const styles = StyleSheet.create({
     padding: 12, fontSize: 14, borderWidth: 1, borderColor: '#e0e0e0',
   },
   countText: { fontSize: 12, color: '#888', paddingHorizontal: 14, marginBottom: 4 },
-
   card: {
     backgroundColor: '#fff', marginHorizontal: 12, marginBottom: 12,
     borderRadius: 12, elevation: 2,
@@ -254,7 +222,6 @@ const styles = StyleSheet.create({
   statusActive: { backgroundColor: '#e8f5e9' },
   statusInactive: { backgroundColor: '#ffebee' },
   statusText: { fontSize: 11, fontWeight: '600', color: '#555' },
-
   cardContent: { padding: 12 },
   detail: { fontSize: 13, color: '#666', marginBottom: 4 },
   docBtn: {
@@ -263,14 +230,12 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#c5e1a5'
   },
   docBtnText: { color: '#33691e', fontSize: 12, fontWeight: '600' },
-
   cardActions: { flexDirection: 'row', gap: 6, marginTop: 8 },
   actionBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
   viewBtn: { backgroundColor: '#4CAF50' },
   editBtn: { backgroundColor: '#1976d2' },
   deleteBtn: { backgroundColor: '#d32f2f' },
   actionBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-
   fab: {
     position: 'absolute', bottom: 24, right: 24,
     width: 58, height: 58, borderRadius: 29,
@@ -284,21 +249,4 @@ const styles = StyleSheet.create({
   retryBtnText: { color: '#fff', fontWeight: 'bold' },
   emptyText: { fontSize: 16, color: '#999', fontWeight: '600' },
   emptySubText: { fontSize: 13, color: '#bbb', marginTop: 4 },
-
-  // Delete modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: {
-    backgroundColor: '#fff', padding: 24, borderRadius: 16,
-    width: '80%', maxWidth: 350, alignItems: 'center',
-    elevation: 10, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10
-  },
-  modalIcon: { fontSize: 40, marginBottom: 10 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#333', marginBottom: 8 },
-  modalText: { fontSize: 14, color: '#666', textAlign: 'center', marginBottom: 24, lineHeight: 22 },
-  modalActions: { flexDirection: 'row', gap: 10, width: '100%' },
-  modalBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
-  modalCancelBtn: { backgroundColor: '#f5f5f5', borderWidth: 1, borderColor: '#ddd' },
-  modalCancelText: { color: '#555', fontWeight: '700', fontSize: 15 },
-  modalDeleteBtn: { backgroundColor: '#d32f2f' },
-  modalDeleteText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });

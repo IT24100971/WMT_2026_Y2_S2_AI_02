@@ -134,12 +134,12 @@ function AppStack() {
           headerTitleStyle: { fontWeight: '700' },
         }} 
       />
-      <Stack.Screen name="Shifts" component={ShiftsScreen} options={{ title: 'Shift Management' }} />
+      <Stack.Screen
         name="Inventory"
         component={InventoryListScreen}
         options={{
           title: 'Inventory Management',
-          headerStyle: { backgroundColor: '#F97316' },
+          headerStyle: { backgroundColor: '#1976d2' },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: '700' },
         }}
@@ -149,7 +149,7 @@ function AppStack() {
         component={AddInventoryScreen}
         options={{
           title: 'Add Inventory Record',
-          headerStyle: { backgroundColor: '#F97316' },
+          headerStyle: { backgroundColor: '#1976d2' },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: '700' },
         }}
@@ -159,7 +159,7 @@ function AppStack() {
         component={EditStockScreen}
         options={{
           title: 'Edit Stock',
-          headerStyle: { backgroundColor: '#F97316' },
+          headerStyle: { backgroundColor: '#1976d2' },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: '700' },
         }}
@@ -196,7 +196,7 @@ function AppStack() {
         }}
       />
 
-      <Stack.Screen name="Suppliers" component={SuppliersScreen} options={{ title: 'Supplier Management' }} />
+      
       <Stack.Screen name="Complaints" component={ComplaintsScreen} options={{ title: 'Complaint Management' }} />
       <Stack.Screen name="GRN" component={GRNScreen} options={{ title: 'GRN Management' }} />
     </Stack.Navigator>
