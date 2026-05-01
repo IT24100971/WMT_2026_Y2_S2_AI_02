@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 16 },
   sectionTitle: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6, marginTop: 14 },
-  required: { color: '#F97316' },
+  required: { color: '#d32f2f' },
   input: {
     backgroundColor: '#f7f7f7', borderRadius: 10, paddingHorizontal: 14,
     paddingVertical: 12, fontSize: 15, color: '#1a1a1a',
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   },
   selectorText: { fontSize: 15, color: '#1a1a1a' },
   selectorPlaceholder: { fontSize: 15, color: '#bbb' },
-  selectorArrow: { color: '#F97316', fontWeight: '700' },
+  selectorArrow: { color: '#1976d2', fontWeight: '700' },
   dropdown: {
     backgroundColor: '#fff', borderRadius: 10, borderWidth: 1,
     borderColor: '#e0e0e0', marginTop: 4, maxHeight: 220, overflow: 'hidden', elevation: 4
@@ -259,6 +259,6 @@ const styles = StyleSheet.create({
   fileIcon: { fontSize: 22 },
   fileName: { flex: 1, fontSize: 13, color: '#1a1a1a', fontWeight: '500' },
   fileRemove: { fontSize: 16, color: '#c62828', fontWeight: '700', paddingHorizontal: 4 },
-  createBtn: { backgroundColor: '#F97316', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
+  createBtn: { backgroundColor: '#1976d2', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
   createBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

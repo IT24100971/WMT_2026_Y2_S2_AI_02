@@ -144,7 +144,7 @@ export default function ShiftListScreen({ navigation }) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#ff6b00" />
+        <ActivityIndicator size="large" color="#6A1B9A" />
         <Text style={styles.loadingText}>Loading shifts...</Text>
       </View>
     );
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     borderRadius: 20, backgroundColor: '#e0e0e0',
     marginRight: 6, marginBottom: 6,
   },
-  filterBtnActive: { backgroundColor: '#ff6b00' },
+  filterBtnActive: { backgroundColor: '#6A1B9A' },
   filterBtnText: { fontSize: 12, color: '#555', fontWeight: '600' },
   filterBtnTextActive: { color: '#fff' },
   countText: { fontSize: 12, color: '#888', paddingHorizontal: 14, marginBottom: 4 },
@@ -253,20 +253,20 @@ const styles = StyleSheet.create({
   timeText: { fontSize: 13, color: '#444', marginBottom: 2 },
   memberStatusText: { fontSize: 12, color: '#0b6e4f', marginTop: 4, fontWeight: '600' },
   notesText: { fontSize: 12, color: '#888', marginTop: 4, fontStyle: 'italic' },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: '#ff9800' },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: '#6A1B9A' },
   statusCompleted: { backgroundColor: '#4caf50' },
   statusAbsent: { backgroundColor: '#f44336' },
   statusText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
   cardActions: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' },
   actionBtn: { flex: 1, minWidth: '45%', paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
-  viewBtn: { backgroundColor: '#1976d2' },
-  editBtn: { backgroundColor: '#1976d2' },
+  viewBtn: { backgroundColor: '#6A1B9A' },
+  editBtn: { backgroundColor: '#6A1B9A' },
   deleteBtn: { backgroundColor: '#d32f2f' },
   actionBtnText: { color: '#fff', fontSize: 12, fontWeight: '600' },
   fab: {
     position: 'absolute', bottom: 24, right: 24,
     width: 58, height: 58, borderRadius: 29,
-    backgroundColor: '#ff6b00', justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#6A1B9A', justifyContent: 'center', alignItems: 'center',
     elevation: 6, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4,
   },
   fabText: { color: '#fff', fontSize: 32, lineHeight: 36 },
