@@ -22,7 +22,8 @@ export const AuthProvider = ({ children }) => {
         setUser(JSON.parse(userData));
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       }
-    } catch (error) { console.log(error);
+    } catch (error) {
+      console.log(error);
     } finally { setLoading(false); }
   };
 

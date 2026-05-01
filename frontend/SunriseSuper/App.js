@@ -1,8 +1,9 @@
-﻿// App.js
+// App.js
 // Main navigation file. Controls which screens are shown.
 // Changes from original: replaced ProductsScreen placeholder with real screens,
 // and added AddProduct + EditProduct to the AppStack navigator.
 
+import 'react-native-gesture-handler';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -24,6 +25,13 @@ import EditProductScreen from './src/screens/products/EditProductScreen';
 import InventoryListScreen from './src/screens/inventory/InventoryListScreen';
 import AddInventoryScreen  from './src/screens/inventory/AddInventoryScreen';
 import EditStockScreen     from './src/screens/inventory/EditStockScreen';
+
+// ── SUPPLIER MANAGEMENT SCREENS (Student 3) ──────────
+import SupplierListScreen from './src/screens/suppliers/SupplierListScreen';
+import AddSupplierScreen from './src/screens/suppliers/AddSupplierScreen';
+import EditSupplierScreen from './src/screens/suppliers/EditSupplierScreen';
+import ViewSupplierScreen from './src/screens/suppliers/ViewSupplierScreen';
+
 // ── YOUR SCREENS (Student 3 — Shifts) ────────────────────
 import ShiftListScreen from './src/screens/shifts/ShiftListScreen';
 import AddShiftScreen from './src/screens/shifts/AddShiftScreen';
@@ -39,8 +47,7 @@ const PlaceholderScreen = ({ title }) => (
   </View>
 );
 
-function InventoryScreen() { return <PlaceholderScreen title="📊 Inventory Management" />; }
-function SuppliersScreen() { return <PlaceholderScreen title="🏢 Supplier Management" />; }
+
 function ComplaintsScreen() { return <PlaceholderScreen title="⚠️ Complaint Management" />; }
 function GRNScreen() { return <PlaceholderScreen title="📄 GRN Management" />; }
 
@@ -86,7 +93,48 @@ function AppStack() {
       {/* ─────────────────────────────────────────────────── */}
 
       {/* Other students' screens (placeholders for now) */}
-      <Stack.Screen
+      
+      <Stack.Screen 
+        name="Suppliers" 
+        component={SupplierListScreen} 
+        options={{ 
+          title: 'Supplier Management',
+          headerStyle: { backgroundColor: '#4CAF50' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }} 
+      />
+      <Stack.Screen 
+        name="AddSupplier" 
+        component={AddSupplierScreen} 
+        options={{ 
+          title: 'Add New Supplier',
+          headerStyle: { backgroundColor: '#4CAF50' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }} 
+      />
+      <Stack.Screen 
+        name="ViewSupplier" 
+        component={ViewSupplierScreen} 
+        options={{ 
+          title: 'Supplier Details',
+          headerStyle: { backgroundColor: '#4CAF50' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }} 
+      />
+      <Stack.Screen 
+        name="EditSupplier" 
+        component={EditSupplierScreen} 
+        options={{ 
+          title: 'Edit Supplier',
+          headerStyle: { backgroundColor: '#4CAF50' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }} 
+      />
+      <Stack.Screen name="Shifts" component={ShiftsScreen} options={{ title: 'Shift Management' }} />
         name="Inventory"
         component={InventoryListScreen}
         options={{
