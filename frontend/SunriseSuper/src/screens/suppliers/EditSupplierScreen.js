@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Linking, Modal
+  ScrollView, Alert, ActivityIndicator, Linking, Modal, FlatList
 } from 'react-native';
 import axios from 'axios';
 import * as DocumentPicker from 'expo-document-picker';
@@ -17,19 +17,62 @@ export default function EditSupplierScreen({ route, navigation }) {
   const [contactNumber, setContactNumber] = useState(supplier.contactNumber || '');
   const [email, setEmail] = useState(supplier.email || '');
   const [address, setAddress] = useState(supplier.address || '');
-  const [productsSupplied, setProductsSupplied] = useState(
-    supplier.productsSupplied ? supplier.productsSupplied.join(', ') : ''
-  );
   const [status, setStatus] = useState(supplier.status || 'Active');
-  
+
   // existing document path if any
   const [existingDoc, setExistingDoc] = useState(supplier.contractDocument || null);
   // newly selected document object
   const [document, setDocument] = useState(null);
-  
+
+  // ── Products dropdown ─────────────────────────────────────────────────────
+  const [allProducts, setAllProducts] = useState([]);        // [{_id, name, category}]
+  const [selectedProducts, setSelectedProducts] = useState([]); // [_id, ...]
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [productsLoading, setProductsLoading] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // Fetch products and pre-select based on supplier.productsSupplied names
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    setProductsLoading(true);
+    try {
+      const res = await axios.get(`${BASE_URL}/products`);
+      const products = res.data;
+      setAllProducts(products);
+
+      // Pre-select products whose name matches the stored productsSupplied strings
+      if (supplier.productsSupplied && supplier.productsSupplied.length > 0) {
+        const existing = supplier.productsSupplied.map(n => n.toLowerCase().trim());
+        const preSelected = products
+          .filter(p => existing.includes(p.name.toLowerCase().trim()))
+          .map(p => p._id);
+        setSelectedProducts(preSelected);
+      }
+    } catch (err) {
+      Alert.alert('Warning', 'Could not load products list.');
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  const toggleProduct = (id) => {
+    setSelectedProducts(prev =>
+      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    );
+  };
+
+  const selectedLabels = allProducts
+    .filter(p => selectedProducts.includes(p._id))
+    .map(p => p.name)
+    .join(', ');
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   const pickDocument = async () => {
     try {
@@ -56,7 +99,7 @@ export default function EditSupplierScreen({ route, navigation }) {
       e.email = 'Invalid email format';
     }
     if (!address.trim()) e.address = 'Address is required';
-    
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -73,17 +116,13 @@ export default function EditSupplierScreen({ route, navigation }) {
       formData.append('address', address);
       formData.append('status', status);
 
-      if (productsSupplied.trim()) {
-        const products = productsSupplied.split(',').map(p => p.trim()).filter(p => p);
-        products.forEach(p => {
-          formData.append('productsSupplied', p);
-        });
-      }
+      // Send selected product names
+      const selectedNames = allProducts
+        .filter(p => selectedProducts.includes(p._id))
+        .map(p => p.name);
+      selectedNames.forEach(name => formData.append('productsSupplied', name));
 
       if (document) {
-        // On web, blob URIs must be fetched and converted to a Blob
-        // before being appended to FormData. The {uri, type, name} pattern
-        // only works on React Native native — on web it stringifies to [object Object].
         if (typeof document.uri === 'string' && document.uri.startsWith('blob:')) {
           const blobRes = await fetch(document.uri);
           const blob = await blobRes.blob();
@@ -119,8 +158,8 @@ export default function EditSupplierScreen({ route, navigation }) {
   };
 
   return (
-    <ScrollView 
-      style={styles.container} 
+    <ScrollView
+      style={styles.container}
       contentContainerStyle={styles.scrollContent}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={true}
@@ -173,14 +212,24 @@ export default function EditSupplierScreen({ route, navigation }) {
       />
       {errors.address && <Text style={styles.errorText}>{errors.address}</Text>}
 
+      {/* ── Products Supplied – Multi-select dropdown ── */}
       <Text style={styles.label}>Products Supplied</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g. Rice, Oil, Flour (comma separated)"
-        value={productsSupplied}
-        onChangeText={setProductsSupplied}
-      />
-      <Text style={styles.helperText}>Separate multiple products with commas.</Text>
+      <TouchableOpacity
+        style={styles.dropdownBtn}
+        onPress={() => setShowProductModal(true)}
+      >
+        {productsLoading ? (
+          <ActivityIndicator size="small" color="#4CAF50" />
+        ) : (
+          <Text style={[styles.dropdownBtnText, !selectedLabels && styles.dropdownPlaceholder]} numberOfLines={2}>
+            {selectedLabels || 'Tap to select products…'}
+          </Text>
+        )}
+        <Text style={styles.dropdownArrow}>▾</Text>
+      </TouchableOpacity>
+      {selectedProducts.length > 0 && (
+        <Text style={styles.helperText}>{selectedProducts.length} product(s) selected</Text>
+      )}
 
       <Text style={styles.label}>Status</Text>
       <View style={styles.optionRow}>
@@ -238,6 +287,57 @@ export default function EditSupplierScreen({ route, navigation }) {
       </TouchableOpacity>
 
       <View style={{ height: 40 }} />
+
+      {/* ── Product Selection Modal ── */}
+      <Modal visible={showProductModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.productModalContent}>
+            <View style={styles.productModalHeader}>
+              <Text style={styles.productModalTitle}>Select Products</Text>
+              <TouchableOpacity onPress={() => setShowProductModal(false)}>
+                <Text style={styles.productModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {productsLoading ? (
+              <ActivityIndicator size="large" color="#4CAF50" style={{ marginVertical: 30 }} />
+            ) : allProducts.length === 0 ? (
+              <Text style={styles.noProductsText}>No products found in the database.</Text>
+            ) : (
+              <FlatList
+                data={allProducts}
+                keyExtractor={item => item._id}
+                renderItem={({ item }) => {
+                  const isSelected = selectedProducts.includes(item._id);
+                  return (
+                    <TouchableOpacity
+                      style={[styles.productItem, isSelected && styles.productItemSelected]}
+                      onPress={() => toggleProduct(item._id)}
+                    >
+                      <View style={styles.productItemLeft}>
+                        <Text style={[styles.productItemName, isSelected && styles.productItemNameSelected]}>
+                          {item.name}
+                        </Text>
+                        <Text style={styles.productItemCategory}>{item.category}</Text>
+                      </View>
+                      {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                    </TouchableOpacity>
+                  );
+                }}
+                style={{ maxHeight: 400 }}
+              />
+            )}
+
+            <TouchableOpacity
+              style={styles.modalDoneBtn}
+              onPress={() => setShowProductModal(false)}
+            >
+              <Text style={styles.modalDoneBtnText}>Done ({selectedProducts.length} selected)</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Success Modal */}
       <Modal visible={showSuccess} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -245,8 +345,8 @@ export default function EditSupplierScreen({ route, navigation }) {
             <Text style={styles.modalIcon}>✅</Text>
             <Text style={styles.modalTitle}>Success!</Text>
             <Text style={styles.modalText}>Supplier updated successfully.</Text>
-            <TouchableOpacity 
-              style={styles.modalBtn} 
+            <TouchableOpacity
+              style={styles.modalBtn}
               onPress={() => { setShowSuccess(false); navigation.goBack(); }}
             >
               <Text style={styles.modalBtnText}>OK</Text>
@@ -281,6 +381,45 @@ const styles = StyleSheet.create({
   optionBtnActive: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
   optionBtnText: { color: '#555', fontSize: 13, fontWeight: '500' },
   optionBtnTextActive: { color: '#fff', fontWeight: '700' },
+  // Dropdown
+  dropdownBtn: {
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
+    padding: 11, backgroundColor: '#fafafa', flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'space-between', minHeight: 44,
+  },
+  dropdownBtnText: { fontSize: 14, color: '#333', flex: 1, marginRight: 6 },
+  dropdownPlaceholder: { color: '#aaa' },
+  dropdownArrow: { fontSize: 16, color: '#888' },
+  // Product modal
+  productModalContent: {
+    backgroundColor: '#fff', borderRadius: 16, width: '92%', maxWidth: 440,
+    padding: 0, overflow: 'hidden', elevation: 10,
+    shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10,
+  },
+  productModalHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#4CAF50', paddingHorizontal: 18, paddingVertical: 14,
+  },
+  productModalTitle: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  productModalClose: { color: '#fff', fontSize: 20, fontWeight: 'bold' },
+  productItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 18, paddingVertical: 13,
+    borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+  },
+  productItemSelected: { backgroundColor: '#f1f8e9' },
+  productItemLeft: { flex: 1 },
+  productItemName: { fontSize: 14, fontWeight: '600', color: '#333' },
+  productItemNameSelected: { color: '#2e7d32' },
+  productItemCategory: { fontSize: 12, color: '#888', marginTop: 2 },
+  checkmark: { color: '#4CAF50', fontSize: 18, fontWeight: 'bold', marginLeft: 8 },
+  noProductsText: { textAlign: 'center', color: '#888', padding: 24 },
+  modalDoneBtn: {
+    margin: 14, backgroundColor: '#4CAF50', paddingVertical: 13,
+    borderRadius: 10, alignItems: 'center',
+  },
+  modalDoneBtnText: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
+  // Existing doc
   existingDocContainer: { marginBottom: 10, padding: 12, backgroundColor: '#f5f5f5', borderRadius: 8 },
   existingDocText: { fontSize: 13, color: '#555', marginBottom: 6 },
   viewDocBtn: {
@@ -288,6 +427,7 @@ const styles = StyleSheet.create({
     borderRadius: 6, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#c5e1a5'
   },
   viewDocBtnText: { color: '#33691e', fontSize: 13, fontWeight: '600' },
+  // Doc picker
   docPicker: {
     borderWidth: 2, borderColor: '#4CAF50', borderStyle: 'dashed',
     borderRadius: 10, overflow: 'hidden', marginTop: 4, padding: 20,
@@ -307,6 +447,7 @@ const styles = StyleSheet.create({
   submitBtnDisabled: { opacity: 0.6 },
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
   errorText: { color: '#d32f2f', fontSize: 12, marginTop: 3 },
+  // Success modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalContent: { backgroundColor: '#fff', padding: 24, borderRadius: 16, width: '80%', maxWidth: 350, alignItems: 'center', elevation: 10, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 10 },
   modalIcon: { fontSize: 48, marginBottom: 12 },
