@@ -54,23 +54,40 @@ const getInventoryById = async (req, res) => {
 };
 
 const updateStock = async (req, res) => {
-  try {
-    const { currentStock } = req.body;
-    if (currentStock < 0) {
-      return res.status(400).json({ message: 'Stock cannot be negative' });
-    }
-    
-    const inventory = await Inventory.findByIdAndUpdate(
-      req.params.id,
-      { currentStock, lastRestockedDate: Date.now() },
-      { new: true }
-    );
-    res.json(inventory);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+  upload(req, res, async (err) => {
+    if (err) return res.status(400).json({ message: err.message });
 
+    try {
+      const { currentStock, reorderLevel, maxStock, warehouseLocation, expiryDate } = req.body;
+
+      if (currentStock < 0) {
+        return res.status(400).json({ message: 'Stock cannot be negative' });
+      }
+
+      const updateData = {
+        currentStock,
+        reorderLevel,
+        maxStock,
+        warehouseLocation,
+        expiryDate: expiryDate || undefined,
+        lastRestockedDate: Date.now()
+      };
+
+      if (req.file) updateData.stockReport = req.file.path;  // ← update report if new file uploaded
+
+      const inventory = await Inventory.findByIdAndUpdate(
+        req.params.id,
+        updateData,
+        { new: true }
+      );
+
+      if (!inventory) return res.status(404).json({ message: 'Inventory not found' });
+      res.json(inventory);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+};
 const deleteInventory = async (req, res) => {
   try {
     await Inventory.findByIdAndDelete(req.params.id);
