@@ -9,7 +9,12 @@ const grnSchema = new mongoose.Schema({
   condition: { type: String, enum: ['Good', 'Damaged', 'Rejected'], default: 'Good' },
   receivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   receivedDate: { type: Date, default: Date.now },
-  image: { type: String }
+  image: { type: String },
+  images: [{ type: String }], // Array of image paths
+  // Read/acknowledgement fields: Admin or Supervisor can mark a GRN as read
+  isRead: { type: Boolean, default: false },
+  readBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  readAt: { type: Date }
 });
 
 grnSchema.virtual('shipmentStatus').get(function() {

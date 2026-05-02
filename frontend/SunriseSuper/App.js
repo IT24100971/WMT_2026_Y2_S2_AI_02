@@ -49,7 +49,10 @@ const PlaceholderScreen = ({ title }) => (
 
 
 function ComplaintsScreen() { return <PlaceholderScreen title="⚠️ Complaint Management" />; }
-function GRNScreen() { return <PlaceholderScreen title="📄 GRN Management" />; }
+import CreateGRNScreen from './src/screens/grn/CreateGRNScreen';
+import GRNListScreen from './src/screens/grn/GRNListScreen';
+
+function GRNScreen() { return <GRNListScreen />; }
 
 const Stack = createStackNavigator();
 
@@ -198,7 +201,26 @@ function AppStack() {
 
       
       <Stack.Screen name="Complaints" component={ComplaintsScreen} options={{ title: 'Complaint Management' }} />
-      <Stack.Screen name="GRN" component={GRNScreen} options={{ title: 'GRN Management' }} />
+      <Stack.Screen 
+        name="GRNList" 
+        component={GRNListScreen} 
+        options={{ 
+          title: 'GRN Management',
+          headerStyle: { backgroundColor: '#8B4513' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }} 
+      />
+      <Stack.Screen 
+        name="CreateGRN" 
+        component={CreateGRNScreen} 
+        options={{ 
+          title: 'Create GRN',
+          headerStyle: { backgroundColor: '#8B4513' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }} 
+      />
     </Stack.Navigator>
   );
 }

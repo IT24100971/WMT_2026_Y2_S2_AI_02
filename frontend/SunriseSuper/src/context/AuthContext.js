@@ -6,6 +6,10 @@ export const BASE_URL = 'http://192.168.8.109:5000/api';
 
 const AuthContext = createContext();
 
+// Ensure axios uses correct base URL and timeout immediately
+axios.defaults.baseURL = BASE_URL;
+axios.defaults.timeout = 20000; // 20s
+
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -21,6 +25,9 @@ export const AuthProvider = ({ children }) => {
       if (token && userData) {
         setUser(JSON.parse(userData));
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // Ensure axios uses correct base URL and has a reasonable timeout
+        axios.defaults.baseURL = BASE_URL;
+        axios.defaults.timeout = 20000; // 20s
       }
     } catch (error) {
       console.log(error);

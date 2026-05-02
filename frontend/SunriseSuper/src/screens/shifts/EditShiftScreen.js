@@ -130,6 +130,24 @@ export default function EditShiftScreen({ route, navigation }) {
     if (!shiftType) nextErrors.shiftType = 'Please select shift type';
     if (!startTime) nextErrors.startTime = 'Start time is required';
     if (!endTime) nextErrors.endTime = 'End time is required';
+
+    // business validations
+    const todayStart = new Date();
+    todayStart.setHours(0,0,0,0);
+    const selDate = new Date(date);
+    selDate.setHours(0,0,0,0);
+    if (selDate < todayStart) nextErrors.date = 'Date cannot be in the past';
+
+    const startDt = new Date(date);
+    startDt.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
+    const endDt = new Date(date);
+    endDt.setHours(endTime.getHours(), endTime.getMinutes(), 0, 0);
+    if (endDt <= startDt) nextErrors.endTime = 'End time must be after start time';
+
+    const now = new Date();
+    const isToday = selDate.getTime() === todayStart.getTime();
+    if (isToday && startDt < now) nextErrors.startTime = 'Start time cannot be earlier than now for today';
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };

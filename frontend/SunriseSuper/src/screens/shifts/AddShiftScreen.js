@@ -109,8 +109,33 @@ export default function AddShiftScreen({ navigation }) {
 
   const validate = () => {
     const e = {};
+    const todayStart = new Date();
+    todayStart.setHours(0,0,0,0);
+
     if (!selectedUserId) e.userId = 'Please select an employee';
     if (!shiftType) e.shiftType = 'Please select shift type';
+
+    // date must be today or future
+    const selDate = new Date(date);
+    selDate.setHours(0,0,0,0);
+    if (selDate < todayStart) e.date = 'Date cannot be in the past';
+
+    // times
+    const startDt = new Date(date);
+    startDt.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
+    const endDt = new Date(date);
+    endDt.setHours(endTime.getHours(), endTime.getMinutes(), 0, 0);
+    if (endDt <= startDt) {
+      e.endTime = 'End time must be after start time';
+    }
+
+    // if date is today ensure start time is not before now
+    const now = new Date();
+    const isToday = selDate.getTime() === todayStart.getTime();
+    if (isToday && startDt < now) {
+      e.startTime = 'Start time cannot be earlier than now for today';
+    }
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };

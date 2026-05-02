@@ -41,6 +41,10 @@ const createShift = async (req, res) => {
       if (!user) return res.status(404).json({ message: 'User not found' });
       
       const shiftData = { ...req.body };
+      // validate date/time business rules
+      const validation = validateShiftData(shiftData);
+      if (!validation.valid) return res.status(400).json({ message: validation.message });
+
       if (req.file) {
         shiftData.attendanceReport = normalizeFilePath(req.file.path);
         shiftData.attendanceReportOriginalName = req.file.originalname;
@@ -79,6 +83,9 @@ const updateShift = async (req, res) => {
     
     try {
       const updateData = { ...req.body };
+      // validate date/time business rules on update as well
+      const validation = validateShiftData(updateData, true);
+      if (!validation.valid) return res.status(400).json({ message: validation.message });
       if (req.file) {
         updateData.attendanceReport = normalizeFilePath(req.file.path);
         updateData.attendanceReportOriginalName = req.file.originalname;
@@ -237,3 +244,50 @@ module.exports = {
   uploadAttendanceReport,
   getShiftStats
 };
+
+// Helper: validate incoming shift date/time
+function validateShiftData(data, isUpdate = false) {
+  try {
+    const { date, startTime, endTime } = data;
+    if (!date) return { valid: false, message: 'Date is required' };
+
+    const shiftDate = new Date(date);
+    // clear time portion for comparison
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    if (shiftDate < todayStart) {
+      return { valid: false, message: 'Shift date cannot be in the past' };
+    }
+
+    if (!startTime || !endTime) return { valid: false, message: 'Start time and end time are required' };
+
+    // parse HH:MM
+    const parse = (t) => {
+      const parts = String(t).split(':');
+      const hh = parseInt(parts[0] || '0', 10);
+      const mm = parseInt(parts[1] || '0', 10);
+      return { hh, mm };
+    };
+
+    const s = parse(startTime);
+    const e = parse(endTime);
+    const startDt = new Date(shiftDate);
+    startDt.setHours(s.hh, s.mm, 0, 0);
+    const endDt = new Date(shiftDate);
+    endDt.setHours(e.hh, e.mm, 0, 0);
+
+    if (endDt <= startDt) return { valid: false, message: 'End time must be after start time' };
+
+    // If shift is today, ensure start time is not before now
+    const now = new Date();
+    const isSameDay = shiftDate.getFullYear() === now.getFullYear() && shiftDate.getMonth() === now.getMonth() && shiftDate.getDate() === now.getDate();
+    if (isSameDay && startDt < now) {
+      return { valid: false, message: 'Start time cannot be earlier than now for today' };
+    }
+
+    return { valid: true };
+  } catch (err) {
+    return { valid: false, message: 'Invalid date/time format' };
+  }
+}
