@@ -6,7 +6,7 @@ const router = express.Router();
 router.post('/', protect, createInventory);
 router.get('/', protect, getInventory);
 router.get('/:id', protect, getInventoryById);
-router.put('/:id/stock', protect, updateStock);
+router.put('/:id', protect, updateStock);
 router.delete('/:id', protect, deleteInventory);
 
 module.exports = router;
