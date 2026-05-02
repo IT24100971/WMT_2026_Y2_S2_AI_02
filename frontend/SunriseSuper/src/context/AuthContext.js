@@ -2,7 +2,11 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
+<<<<<<< Updated upstream
 export const BASE_URL = 'http://192.168.8.109:5000/api';
+=======
+export const BASE_URL = 'http://192.168.8.108:5000/api';
+>>>>>>> Stashed changes
 
 const AuthContext = createContext();
 

@@ -8,40 +8,25 @@ const cors = require('cors');
 
 const app = express();
 
-// Middleware
+// Increase payload limit for Base64 images
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
-app.use(express.json());
-app.use('/uploads', express.static('uploads'));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Connected Successfully'))
   .catch(err => console.log('MongoDB Connection Failed:', err.message));
 
-// Routes
-app.get('/', (req, res) => {
-  res.json({ message: 'Sunrise Super API is running' });
-});
-
 // Import routes
 const authRoutes = require('./routes/authRoutes');
-const productRoutes = require('./routes/productRoutes');
-const inventoryRoutes = require('./routes/inventoryRoutes');
-const supplierRoutes = require('./routes/supplierRoutes');
-const shiftRoutes = require('./routes/shiftRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
-const grnRoutes = require('./routes/grnRoutes');
+// ... other imports (products, inventory, etc.)
 
 // Use routes
 app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/inventory', inventoryRoutes);
-app.use('/api/suppliers', supplierRoutes);
-app.use('/api/shifts', shiftRoutes);
 app.use('/api/complaints', complaintRoutes);
-app.use('/api/grn', grnRoutes);
+// ... other route usages
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
