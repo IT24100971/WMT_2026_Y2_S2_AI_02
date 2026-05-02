@@ -257,7 +257,7 @@ export default function GRNListScreen({ navigation }) {
         </View>
         {item.receivedQty !== item.invoicedQty && (
           <Text style={styles.discrepancyText}>
-            Quantity discrepancy: {Math.abs(Number(item.invoicedQty) - Number(item.receivedQty))} unit(s)
+            Quantity discrepancy: {(Number(item.receivedQty) - Number(item.invoicedQty)) > 0 ? '+' : '-'}{Math.abs(Number(item.receivedQty) - Number(item.invoicedQty))} {item.unit || item.productId?.unit || 'unit(s)'}
           </Text>
         )}
         <Text style={styles.detail}>🔍 Condition: <Text style={styles.detailBold}>{item.condition}</Text></Text>

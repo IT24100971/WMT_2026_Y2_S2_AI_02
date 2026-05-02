@@ -78,9 +78,9 @@ const createGRN = (req, res) => {
     if (err) return res.status(400).json({ message: err.message });
 
     try {
-      const { supplierId, productId, invoicedQty, receivedQty, condition } = req.body;
+      const { supplierId, productId, invoicedQty, receivedQty, condition, unit, notes } = req.body;
 
-      if (!supplierId || !productId || !invoicedQty || !receivedQty) {
+      if (!supplierId || !productId || !invoicedQty || !receivedQty || !unit) {
         return res.status(400).json({ message: 'Please fill all required fields' });
       }
 
@@ -99,7 +99,9 @@ const createGRN = (req, res) => {
         productId,
         invoicedQty: Number(invoicedQty),
         receivedQty: Number(receivedQty),
+        unit,
         condition: condition || 'Good',
+        notes: notes || '',
         receivedBy: req.user ? req.user.id : null,
         receivedDate: new Date(),
         image: images.length > 0 ? images[0] : null,
@@ -173,12 +175,14 @@ const updateGRN = (req, res) => {
       const grn = await GRN.findById(req.params.id);
       if (!grn) return res.status(404).json({ message: 'GRN not found' });
 
-      const { supplierId, productId, invoicedQty, receivedQty, condition } = req.body;
+      const { supplierId, productId, invoicedQty, receivedQty, condition, unit, notes } = req.body;
       if (supplierId) grn.supplierId = supplierId;
       if (productId) grn.productId = productId;
       if (invoicedQty !== undefined) grn.invoicedQty = Number(invoicedQty);
       if (receivedQty !== undefined) grn.receivedQty = Number(receivedQty);
       if (condition) grn.condition = condition;
+      if (unit) grn.unit = unit;
+      if (notes !== undefined) grn.notes = notes;
 
       const files = req.files || [];
       const uploadedImages = files.map(f => relativePath(f));

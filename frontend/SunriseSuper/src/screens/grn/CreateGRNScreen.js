@@ -9,6 +9,7 @@ import axios from 'axios';
 import { BASE_URL } from '../../context/AuthContext';
 
 const CONDITIONS = ['Good', 'Damaged', 'Rejected'];
+const UNITS = ['kg', 'L', 'pcs'];
 const MAX_IMAGES = 4;
 const SERVER_URL = BASE_URL.replace('/api', '');
 
@@ -20,6 +21,8 @@ export default function CreateGRNScreen({ navigation, route }) {
   const [invoicedQty, setInvoicedQty] = useState('');
   const [receivedQty, setReceivedQty] = useState('');
   const [condition, setCondition] = useState('Good');
+  const [unit, setUnit] = useState('');
+  const [notes, setNotes] = useState('');
   const [images, setImages] = useState([]);
 
   const [allSuppliers, setAllSuppliers] = useState([]);
@@ -29,6 +32,7 @@ export default function CreateGRNScreen({ navigation, route }) {
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showConditionModal, setShowConditionModal] = useState(false);
+  const [showUnitModal, setShowUnitModal] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -48,6 +52,8 @@ export default function CreateGRNScreen({ navigation, route }) {
     setInvoicedQty(String(editGRN.invoicedQty ?? ''));
     setReceivedQty(String(editGRN.receivedQty ?? ''));
     setCondition(editGRN.condition || 'Good');
+    setUnit(editGRN.unit || '');
+    setNotes(editGRN.notes || '');
 
     const existingImages = Array.isArray(editGRN.images) && editGRN.images.length > 0
       ? editGRN.images
@@ -173,6 +179,7 @@ export default function CreateGRNScreen({ navigation, route }) {
     } else if (isNaN(Number(receivedQty)) || Number(receivedQty) < 0) {
       e.receivedQty = 'Must be a positive number';
     }
+    if (!unit) e.unit = 'Unit is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -189,6 +196,8 @@ export default function CreateGRNScreen({ navigation, route }) {
       formData.append('invoicedQty', invoicedQty);
       formData.append('receivedQty', receivedQty);
       formData.append('condition', condition);
+      formData.append('unit', unit);
+      formData.append('notes', notes);
 
       const existingImages = images.filter(img => typeof img === 'string');
       formData.append('existingImages', JSON.stringify(existingImages));
@@ -277,6 +286,16 @@ export default function CreateGRNScreen({ navigation, route }) {
       />
       {errors.receivedQty && <Text style={styles.errorText}>{errors.receivedQty}</Text>}
 
+      {/* Unit */}
+      <Text style={styles.label}>Unit <Text style={styles.required}>*</Text></Text>
+      <TouchableOpacity
+        style={[styles.input, styles.selectButton, errors.unit && styles.inputError]}
+        onPress={() => setShowUnitModal(true)}
+      >
+        <Text style={{ color: unit ? '#333' : '#999' }}>{unit || 'Select Unit'}</Text>
+      </TouchableOpacity>
+      {errors.unit && <Text style={styles.errorText}>{errors.unit}</Text>}
+
       {/* Condition */}
       <Text style={styles.label}>Condition <Text style={styles.required}>*</Text></Text>
       <TouchableOpacity
@@ -285,6 +304,17 @@ export default function CreateGRNScreen({ navigation, route }) {
       >
         <Text style={{ color: '#333' }}>{condition}</Text>
       </TouchableOpacity>
+
+      {/* Notes */}
+      <Text style={styles.label}>Notes</Text>
+      <TextInput
+        style={[styles.input, styles.notesInput]}
+        placeholder="Add any additional notes (optional)"
+        value={notes}
+        onChangeText={setNotes}
+        multiline={true}
+        numberOfLines={4}
+      />
 
       {/* Images */}
       <Text style={styles.label}>Delivery Images <Text style={styles.required}>*</Text></Text>
@@ -473,6 +503,47 @@ export default function CreateGRNScreen({ navigation, route }) {
           </View>
         </View>
       </Modal>
+
+      {/* Unit Modal - Centered */}
+      <Modal visible={showUnitModal} transparent animationType="fade">
+        <View style={styles.centeredModalOverlay}>
+          <View style={styles.centeredModalContent}>
+            <View style={styles.centeredModalHeader}>
+              <Text style={styles.centeredModalTitle}>Select Unit</Text>
+              <TouchableOpacity onPress={() => setShowUnitModal(false)}>
+                <Text style={styles.centeredModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={UNITS}
+              keyExtractor={item => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.centeredModalItem,
+                    unit === item && styles.centeredModalItemSelected
+                  ]}
+                  onPress={() => {
+                    setUnit(item);
+                    setShowUnitModal(false);
+                    setErrors(e => ({ ...e, unit: '' }));
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.centeredModalItemText,
+                      unit === item && styles.centeredModalItemTextSelected
+                    ]}
+                  >
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              scrollEnabled={false}
+            />
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -514,6 +585,10 @@ const styles = StyleSheet.create({
   },
   selectButton: {
     justifyContent: 'center'
+  },
+  notesInput: {
+    textAlignVertical: 'top',
+    paddingVertical: 12
   },
   errorText: {
     color: '#ff0000',
