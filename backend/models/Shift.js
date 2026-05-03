@@ -8,7 +8,16 @@ const shiftSchema = new mongoose.Schema({
   endTime: { type: String, required: true },
   status: { type: String, enum: ['Scheduled', 'Completed', 'Absent'], default: 'Scheduled' },
   notes: { type: String },
-  attendanceReport: { type: String }  // PDF report upload
+  attendanceReport: { type: String },
+  attendanceReportOriginalName: { type: String },
+  attendanceReportMimeType: { type: String },
+  employeeStatus: {
+    type: String,
+    enum: ['Pending', 'Will Attend', 'Unable to Attend'],
+    default: 'Pending'
+  },
+  employeeStatusReason: { type: String },
+  employeeRespondedAt: { type: Date }
 });
 
 module.exports = mongoose.model('Shift', shiftSchema);
