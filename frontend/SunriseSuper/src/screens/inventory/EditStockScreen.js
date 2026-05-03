@@ -1,9 +1,11 @@
- import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   ScrollView, Alert, ActivityIndicator
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as DocumentPicker from 'expo-document-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { BASE_URL } from '../../context/AuthContext';
 
 const STATUS_COLORS = {
@@ -22,6 +24,8 @@ export default function EditStockScreen({ route, navigation }) {
   const [expiryDate, setExpiryDate] = useState(
     inventory.expiryDate ? inventory.expiryDate.substring(0, 10) : ''
   );
+  const [stockReport, setStockReport] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const product = inventory.productId;
@@ -33,6 +37,29 @@ export default function EditStockScreen({ route, navigation }) {
   else if (stockNum < reorderNum) previewStatus = 'Low Stock';
 
   const colors = STATUS_COLORS[previewStatus];
+
+  const handleDateChange = (event, selectedDate) => {
+    if (event.type === 'set' && selectedDate) {
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      setExpiryDate(formattedDate);
+    }
+    setShowDatePicker(false);
+  };
+
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled) {
+        setStockReport(result.assets[0]);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to pick document');
+    }
+  };
 
   const validate = () => {
     if (!currentStock || isNaN(currentStock) || Number(currentStock) < 0)
@@ -53,19 +80,32 @@ export default function EditStockScreen({ route, navigation }) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const stockRes = await fetch(`${BASE_URL}/inventory/${inventory._id}/stock`, {
+      const formData = new FormData();
+      formData.append('currentStock', String(Number(currentStock)));
+      formData.append('reorderLevel', String(Number(reorderLevel)));
+      formData.append('maxStock', String(Number(maxStock)));
+      if (warehouseLocation) formData.append('warehouseLocation', warehouseLocation);
+      if (expiryDate) formData.append('expiryDate', expiryDate);
+      if (stockReport) {
+        formData.append('stockReport', {
+          uri: stockReport.uri,
+          name: stockReport.name,
+          type: stockReport.mimeType || 'application/pdf',
+        });
+      }
+
+      const updateRes = await fetch(`${BASE_URL}/inventory/${inventory._id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ currentStock: Number(currentStock) })
+        body: formData
       });
 
-      const data = await stockRes.json();
-      if (!stockRes.ok) throw new Error(data.message || 'Update failed');
+      const data = await updateRes.json();
+      if (!updateRes.ok) throw new Error(data.message || 'Update failed');
 
-      Alert.alert('Success', 'Stock updated successfully!', [
+      Alert.alert('Success', 'Inventory updated successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (err) {
@@ -139,13 +179,44 @@ export default function EditStockScreen({ route, navigation }) {
       />
 
       <Text style={styles.label}>Expiry Date</Text>
-      <TextInput
-        style={styles.input}
-        value={expiryDate}
-        onChangeText={setExpiryDate}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor="#bbb"
-      />
+      <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+        <Text style={expiryDate ? { color: '#1a1a1a', fontSize: 15 } : styles.placeholder}>
+          {expiryDate || 'Select expiry date'}
+        </Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={expiryDate ? new Date(expiryDate) : new Date()}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
+
+      <Text style={styles.label}>Stock Report</Text>
+      {inventory.stockReport && !stockReport ? (
+        <View style={styles.fileSelected}>
+          <Text style={styles.fileIcon}>📄</Text>
+          <Text style={styles.fileName} numberOfLines={1}>
+            {inventory.stockReport.split(/[\\/]/).pop()}
+          </Text>
+          <TouchableOpacity onPress={pickDocument}>
+            <Text style={styles.fileAction}>Replace</Text>
+          </TouchableOpacity>
+        </View>
+      ) : stockReport ? (
+        <View style={styles.fileSelected}>
+          <Text style={styles.fileIcon}>📄</Text>
+          <Text style={styles.fileName} numberOfLines={1}>{stockReport.name}</Text>
+          <TouchableOpacity onPress={() => setStockReport(null)}>
+            <Text style={styles.fileAction}>Remove</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.uploadBtn} onPress={pickDocument}>
+          <Text style={styles.uploadBtnText}>📎  Attach PDF / DOC</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={[styles.updateBtn, loading && { opacity: 0.7 }]}
@@ -186,10 +257,23 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#f7f7f7', borderRadius: 10, paddingHorizontal: 14,
     paddingVertical: 12, fontSize: 15, color: '#1a1a1a',
-    borderWidth: 1, borderColor: '#e0e0e0'
+    borderWidth: 1, borderColor: '#e0e0e0', justifyContent: 'center'
   },
+  placeholder: { color: '#bbb', fontSize: 15 },
   row: { flexDirection: 'row', gap: 12 },
   halfField: { flex: 1 },
+  uploadBtn: {
+    backgroundColor: '#f7f7f7', borderRadius: 10, paddingVertical: 14,
+    alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0', borderStyle: 'dashed'
+  },
+  uploadBtnText: { fontSize: 14, color: '#555', fontWeight: '500' },
+  fileSelected: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#f0f7ff',
+    borderRadius: 10, padding: 12, borderWidth: 1, borderColor: '#b3d4f5', gap: 10
+  },
+  fileIcon: { fontSize: 22 },
+  fileName: { flex: 1, fontSize: 13, color: '#1a1a1a', fontWeight: '500' },
+  fileAction: { fontSize: 14, color: '#1976d2', fontWeight: '700', paddingHorizontal: 4 },
   updateBtn: { backgroundColor: '#1976d2', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
   updateBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

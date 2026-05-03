@@ -46,7 +46,8 @@ const createProduct = (req, res) => {
         description,
         // req.file is set by multer if an image was uploaded.
         // req.file.path will be something like "uploads/1712345678-product.jpg"
-        image: req.file ? req.file.path : null,
+        // Normalize backslashes to forward slashes for consistent URLs across platforms
+        image: req.file ? req.file.path.replace(/\\/g, '/') : null,
       });
 
       res.status(201).json(product); // 201 = Created
@@ -101,7 +102,8 @@ const updateProduct = (req, res) => {
       if (req.body.costPrice) updateData.costPrice = Number(req.body.costPrice);
 
       // Only update image if a new one was uploaded
-      if (req.file) updateData.image = req.file.path;
+      // Normalize backslashes to forward slashes for consistent URLs across platforms
+      if (req.file) updateData.image = req.file.path.replace(/\\/g, '/');
 
       const product = await Product.findByIdAndUpdate(
         req.params.id,

@@ -6,7 +6,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 
-// Validate required environment variables
 console.log('📝 Checking environment variables...');
 console.log('JWT_SECRET available:', !!process.env.JWT_SECRET);
 if (!process.env.JWT_SECRET) {
@@ -50,7 +49,22 @@ app.use('/api/shifts', shiftRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/grn', grnRoutes);
 
+// Log all routes
+console.log('\n📋 Registered routes:');
+app._router.stack.forEach(middleware => {
+  if (middleware.route) {
+    console.log(`  ${Object.keys(middleware.route.methods).map(m => m.toUpperCase()).join(',')} ${middleware.route.path}`);
+  } else if (middleware.name === 'router') {
+    middleware.handle.stack.forEach(handler => {
+      if (handler.route) {
+        const method = Object.keys(handler.route.methods).map(m => m.toUpperCase()).join(',');
+        console.log(`  ${method} ${handler.route.path}`);
+      }
+    });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`\nServer running on port ${PORT}`);
 });

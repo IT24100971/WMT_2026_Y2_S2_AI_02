@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator
+  ScrollView, Alert, ActivityIndicator, Modal, FlatList
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as DocumentPicker from 'expo-document-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { BASE_URL } from '../../context/AuthContext';
 
 export default function AddInventoryScreen({ navigation }) {
@@ -18,6 +19,7 @@ export default function AddInventoryScreen({ navigation }) {
   const [maxStock, setMaxStock] = useState('');
   const [warehouseLocation, setWarehouseLocation] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [stockReport, setStockReport] = useState(null);  // ← new
   const [loading, setLoading] = useState(false);
 
@@ -56,6 +58,14 @@ export default function AddInventoryScreen({ navigation }) {
     } catch {
       Alert.alert('Error', 'Failed to pick document');
     }
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    if (event.type === 'set' && selectedDate) {
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      setExpiryDate(formattedDate);
+    }
+    setShowDatePicker(false);
   };
 
   const validate = () => {
@@ -122,7 +132,7 @@ export default function AddInventoryScreen({ navigation }) {
       <Text style={styles.label}>Product <Text style={styles.required}>*</Text></Text>
       <TouchableOpacity
         style={styles.selector}
-        onPress={() => setShowProductList(!showProductList)}
+        onPress={() => setShowProductList(true)}
       >
         <Text style={selectedProduct ? styles.selectorText : styles.selectorPlaceholder}>
           {selectedProduct ? selectedProduct.name : 'Select a product...'}
@@ -130,34 +140,56 @@ export default function AddInventoryScreen({ navigation }) {
         <Text style={styles.selectorArrow}>{showProductList ? '▲' : '▼'}</Text>
       </TouchableOpacity>
 
-      {showProductList && (
-        <View style={styles.dropdown}>
-          <TextInput
-            style={styles.dropdownSearch}
-            placeholder="Search products..."
-            value={productSearch}
-            onChangeText={setProductSearch}
-            placeholderTextColor="#999"
-          />
-          {filteredProducts.map(p => (
+      {/* ── Product Selection Modal ── */}
+      <Modal visible={showProductList} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.productModalContent}>
+            <View style={styles.productModalHeader}>
+              <Text style={styles.productModalTitle}>Select Product</Text>
+              <TouchableOpacity onPress={() => setShowProductList(false)}>
+                <Text style={styles.productModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.modalSearchInput}
+              placeholder="Search products..."
+              value={productSearch}
+              onChangeText={setProductSearch}
+              placeholderTextColor="#999"
+            />
+
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={item => item._id}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.productItem}
+                  onPress={() => {
+                    setSelectedProduct(item);
+                    setShowProductList(false);
+                    setProductSearch('');
+                  }}
+                >
+                  <View style={styles.productItemLeft}>
+                    <Text style={styles.productItemName}>{item.name}</Text>
+                    <Text style={styles.productItemSub}>{item.barcode} • {item.category}</Text>
+                  </View>
+                  {selectedProduct?._id === item._id && <Text style={styles.checkmark}>✓</Text>}
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={<Text style={styles.noResultsModal}>No products found</Text>}
+            />
+
             <TouchableOpacity
-              key={p._id}
-              style={styles.dropdownItem}
-              onPress={() => {
-                setSelectedProduct(p);
-                setShowProductList(false);
-                setProductSearch('');
-              }}
+              style={styles.modalDoneBtn}
+              onPress={() => setShowProductList(false)}
             >
-              <Text style={styles.dropdownItemName}>{p.name}</Text>
-              <Text style={styles.dropdownItemSub}>{p.barcode} • {p.category}</Text>
+              <Text style={styles.modalDoneBtnText}>Done</Text>
             </TouchableOpacity>
-          ))}
-          {filteredProducts.length === 0 && (
-            <Text style={styles.noResults}>No products found</Text>
-          )}
+          </View>
         </View>
-      )}
+      </Modal>
 
       {/* ── Stock Fields ── */}
       <View style={styles.row}>
@@ -182,8 +214,19 @@ export default function AddInventoryScreen({ navigation }) {
         placeholder="e.g. Aisle 3, Shelf B" placeholderTextColor="#bbb" />
 
       <Text style={styles.label}>Expiry Date (Optional)</Text>
-      <TextInput style={styles.input} value={expiryDate} onChangeText={setExpiryDate}
-        placeholder="YYYY-MM-DD" placeholderTextColor="#bbb" />
+      <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
+        <Text style={expiryDate ? { color: '#1a1a1a', fontSize: 15 } : styles.placeholder}>
+          {expiryDate || 'Select expiry date'}
+        </Text>
+      </TouchableOpacity>
+      {showDatePicker && (
+        <DateTimePicker
+          value={expiryDate ? new Date(expiryDate) : new Date()}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
 
       {/* ── Stock Report Upload ── */}
       <Text style={styles.label}>Stock Report (Optional)</Text>
@@ -225,8 +268,9 @@ const styles = StyleSheet.create({
   input: {
     backgroundColor: '#f7f7f7', borderRadius: 10, paddingHorizontal: 14,
     paddingVertical: 12, fontSize: 15, color: '#1a1a1a',
-    borderWidth: 1, borderColor: '#e0e0e0'
+    borderWidth: 1, borderColor: '#e0e0e0', justifyContent: 'center'
   },
+  placeholder: { color: '#bbb', fontSize: 15 },
   row: { flexDirection: 'row', gap: 12 },
   halfField: { flex: 1 },
   selector: {
@@ -261,4 +305,19 @@ const styles = StyleSheet.create({
   fileRemove: { fontSize: 16, color: '#c62828', fontWeight: '700', paddingHorizontal: 4 },
   createBtn: { backgroundColor: '#1976d2', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
   createBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  // Modal styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  productModalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%', paddingBottom: 20 },
+  productModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  productModalTitle: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
+  productModalClose: { fontSize: 24, color: '#999', fontWeight: '300' },
+  modalSearchInput: { paddingHorizontal: 16, paddingVertical: 12, fontSize: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', color: '#333' },
+  productItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
+  productItemLeft: { flex: 1 },
+  productItemName: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
+  productItemSub: { fontSize: 12, color: '#888', marginTop: 4 },
+  checkmark: { fontSize: 18, color: '#4CAF50', fontWeight: '700' },
+  noResultsModal: { textAlign: 'center', color: '#aaa', paddingVertical: 30, fontSize: 14 },
+  modalDoneBtn: { backgroundColor: '#1976d2', marginHorizontal: 16, marginTop: 12, paddingVertical: 14, borderRadius: 10, alignItems: 'center' },
+  modalDoneBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });

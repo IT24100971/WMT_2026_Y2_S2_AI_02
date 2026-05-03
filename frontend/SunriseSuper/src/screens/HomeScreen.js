@@ -11,7 +11,7 @@ export default function HomeScreen({ navigation }) {
     { name: '🏢 Supplier Management', screen: 'Suppliers', color: '#4CAF50', student: 'Student 3' },
     { name: '⏰ Shift Management', screen: 'Shifts', color: '#9C27B0', student: 'Student 4' },
     { name: '⚠️ Complaint Management', screen: 'Complaints', color: '#f44336', student: 'Student 5' },
-    { name: '📄 GRN Management', screen: 'GRN', color: '#795548', student: 'Student 6' },
+    { name: '📄 GRN Management', screen: 'GRNList', color: '#795548', student: 'Student 6' },
   ];
 
   return (

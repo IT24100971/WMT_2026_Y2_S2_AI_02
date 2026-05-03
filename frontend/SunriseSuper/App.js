@@ -25,6 +25,7 @@ import EditProductScreen from './src/screens/products/EditProductScreen';
 import InventoryListScreen from './src/screens/inventory/InventoryListScreen';
 import AddInventoryScreen  from './src/screens/inventory/AddInventoryScreen';
 import EditStockScreen     from './src/screens/inventory/EditStockScreen';
+import EditInventoryScreen from './src/screens/inventory/EditInventoryScreen';
 
 // ── SUPPLIER MANAGEMENT SCREENS (Student 3) ──────────
 import SupplierListScreen from './src/screens/suppliers/SupplierListScreen';
@@ -36,6 +37,14 @@ import ViewSupplierScreen from './src/screens/suppliers/ViewSupplierScreen';
 import ShiftListScreen from './src/screens/shifts/ShiftListScreen';
 import AddShiftScreen from './src/screens/shifts/AddShiftScreen';
 import EditShiftScreen from './src/screens/shifts/EditShiftScreen';
+// Complaints
+import ComplaintListScreen from './src/screens/complaints/ComplaintListScreen';
+import AddComplaintScreen from './src/screens/complaints/AddComplaintScreen';
+import EditComplaintScreen from './src/screens/complaints/EditComplaintScreen';
+import ViewComplaintScreen from './src/screens/complaints/ViewComplaintScreen';
+
+import CreateGRNScreen from './src/screens/grn/CreateGRNScreen';
+import GRNListScreen from './src/screens/grn/GRNListScreen';
 // Placeholder for other students' modules (they will replace these)
 const PlaceholderScreen = ({ title }) => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
@@ -164,6 +173,16 @@ function AppStack() {
           headerTitleStyle: { fontWeight: '700' },
         }}
       />
+      <Stack.Screen
+        name="EditInventory"
+        component={EditInventoryScreen}
+        options={{
+          title: 'Edit Stock',
+          headerStyle: { backgroundColor: '#1976d2' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }}
+      />
       {/* ── SHIFT SCREENS (ADD THESE) ── */}
       <Stack.Screen
         name="Shifts"
@@ -197,8 +216,30 @@ function AppStack() {
       />
 
       
-      <Stack.Screen name="Complaints" component={ComplaintsScreen} options={{ title: 'Complaint Management' }} />
-      <Stack.Screen name="GRN" component={GRNScreen} options={{ title: 'GRN Management' }} />
+      <Stack.Screen name="Complaints" component={ComplaintListScreen} options={{ title: 'Complaint Management', headerStyle: { backgroundColor: '#d32f2f' }, headerTintColor: '#fff' }} />
+      <Stack.Screen name="AddComplaint" component={AddComplaintScreen} options={{ title: 'New Complaint', headerStyle: { backgroundColor: '#d32f2f' }, headerTintColor: '#fff' }} />
+      <Stack.Screen name="ViewComplaint" component={ViewComplaintScreen} options={{ title: 'Complaint Details', headerStyle: { backgroundColor: '#d32f2f' }, headerTintColor: '#fff' }} />
+      <Stack.Screen name="EditComplaint" component={EditComplaintScreen} options={{ title: 'Edit Complaint', headerStyle: { backgroundColor: '#d32f2f' }, headerTintColor: '#fff' }} />
+       <Stack.Screen 
+        name="GRNList" 
+        component={GRNListScreen} 
+        options={{ 
+          title: 'GRN Management',
+          headerStyle: { backgroundColor: '#8B4513' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }} 
+      />
+      <Stack.Screen 
+        name="CreateGRN" 
+        component={CreateGRNScreen} 
+        options={{ 
+          title: 'Create GRN',
+          headerStyle: { backgroundColor: '#8B4513' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }} 
+      />
     </Stack.Navigator>
   );
 }

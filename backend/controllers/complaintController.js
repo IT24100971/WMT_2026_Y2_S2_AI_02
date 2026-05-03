@@ -10,6 +10,16 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage }).single('evidenceImage');
 
+const toBoolean = (value) => {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value === 1;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return ['true', '1', 'yes', 'on'].includes(normalized);
+  }
+  return false;
+};
+
 const createComplaint = async (req, res) => {
   upload(req, res, async (err) => {
     if (err) return res.status(400).json({ message: err.message });
@@ -19,7 +29,13 @@ const createComplaint = async (req, res) => {
         ...req.body,
         raisedBy: req.user.id
       };
-      if (req.file) complaintData.evidenceImage = req.file.path;
+      if (typeof req.body.isAnonymous !== 'undefined') {
+        complaintData.isAnonymous = toBoolean(req.body.isAnonymous);
+      }
+        if (req.file) {
+          // Normalize path to use forward slashes for URLs
+          complaintData.evidenceImage = req.file.path.replace(/\\/g, '/');
+        }
       
       const complaint = await Complaint.create(complaintData);
       res.status(201).json(complaint);
@@ -31,10 +47,16 @@ const createComplaint = async (req, res) => {
 
 const getComplaints = async (req, res) => {
   try {
-    const { status, category } = req.query;
+    const { status, category, date } = req.query;
     let filter = {};
     if (status) filter.status = status;
     if (category) filter.category = category;
+    if (date) {
+      // expect date in YYYY-MM-DD, filter createdAt between start and end of day
+      const start = new Date(date + 'T00:00:00.000Z');
+      const end = new Date(date + 'T23:59:59.999Z');
+      filter.createdAt = { $gte: start, $lte: end };
+    }
     
     const complaints = await Complaint.find(filter)
       .populate('raisedBy', 'fullName email')
@@ -61,28 +83,97 @@ const updateComplaintStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const complaint = await Complaint.findById(req.params.id);
-    
-    if (status === 'Resolved' && req.user.role !== 'Admin') {
-      return res.status(403).json({ message: 'Only Admin can mark as Resolved' });
+    if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+
+    // Permission: Resolved can be set by Admin/Supervisor or the worker who raised it
+    if (status === 'Resolved') {
+      const allowed = req.user.role === 'Admin' || req.user.role === 'Supervisor' || String(complaint.raisedBy) === String(req.user.id);
+      if (!allowed) return res.status(403).json({ message: 'Not authorized to mark Resolved' });
     }
-    
-    const updateData = { status };
-    if (status === 'Resolved') updateData.resolvedAt = Date.now();
-    
-    const updated = await Complaint.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    res.json(updated);
+
+    const prev = complaint.status;
+    complaint.status = status;
+    if (status === 'Resolved') complaint.resolvedAt = Date.now();
+
+    // push history entry
+    complaint.history = complaint.history || [];
+    complaint.history.push({ from: prev, to: status, by: req.user.id, role: req.user.role, at: Date.now() });
+
+    const updated = await complaint.save();
+    const populated = await Complaint.findById(updated._id).populate('raisedBy', 'fullName email').populate('assignedTo', 'fullName email');
+    res.json(populated);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+// Edit complaint details (only the worker who submitted it can edit)
+const editComplaintDetails = async (req, res) => {
+  upload(req, res, async (err) => {
+    if (err) return res.status(400).json({ message: err.message });
+    try {
+      const complaint = await Complaint.findById(req.params.id);
+      if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+      if (String(complaint.raisedBy) !== String(req.user.id)) return res.status(403).json({ message: 'Only the worker who raised the complaint can edit it' });
+
+      const { title, description, category, status, isAnonymous } = req.body;
+      if (title) complaint.title = title;
+      if (description) complaint.description = description;
+      if (category) complaint.category = category;
+      if (status && complaint.status !== status) {
+        const prevStatus = complaint.status;
+        complaint.status = status;
+        complaint.history = complaint.history || [];
+        complaint.history.push({ from: prevStatus, to: status, by: req.user.id, role: req.user.role, at: Date.now(), note: 'Status updated in edit' });
+        if (status === 'Resolved') complaint.resolvedAt = Date.now();
+      }
+      if (typeof isAnonymous !== 'undefined') {
+        complaint.isAnonymous = toBoolean(isAnonymous);
+      }
+      if (req.file) complaint.evidenceImage = req.file.path.replace(/\\/g, '/');
+      complaint.editedAt = Date.now();
+      complaint.editedBy = req.user.id;
+
+      // record edit in history
+      complaint.history = complaint.history || [];
+      complaint.history.push({ from: 'Edited', to: 'Edited', by: req.user.id, role: req.user.role, at: Date.now(), note: 'Details edited' });
+
+      const updated = await complaint.save();
+      const populated = await Complaint.findById(updated._id).populate('raisedBy', 'fullName email').populate('assignedTo', 'fullName email');
+      res.json(populated);
+    } catch (error) {
+      res.status(500).json({ message: error.message });
+    }
+  });
 };
 
 const deleteComplaint = async (req, res) => {
   try {
-    await Complaint.findByIdAndDelete(req.params.id);
-    res.json({ message: 'Complaint deleted' });
+    const complaint = await Complaint.findById(req.params.id);
+    if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
+    // Workers may always delete their own complaint
+    if (String(complaint.raisedBy) === String(req.user.id)) {
+      await Complaint.findByIdAndDelete(req.params.id);
+      return res.json({ message: 'Complaint deleted by owner' });
+    }
+
+    // Admin/Supervisor can delete only when BOTH the worker and an admin/supervisor marked it Resolved
+    if (req.user.role === 'Admin' || req.user.role === 'Supervisor') {
+      const history = complaint.history || [];
+      const workerResolved = history.some(h => h.to === 'Resolved' && String(h.by) === String(complaint.raisedBy));
+      const adminResolved = history.some(h => h.to === 'Resolved' && (h.role === 'Admin' || h.role === 'Supervisor'));
+      if (workerResolved && adminResolved) {
+        await Complaint.findByIdAndDelete(req.params.id);
+        return res.json({ message: 'Complaint deleted by admin/supervisor' });
+      }
+      return res.status(403).json({ message: 'Admin/Supervisor can delete only after both worker and admin have marked Resolved' });
+    }
+
+    // All others not permitted
+    return res.status(403).json({ message: 'Not authorized to delete complaint' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = { createComplaint, getComplaints, getComplaintById, updateComplaintStatus, deleteComplaint };
+module.exports = { createComplaint, getComplaints, getComplaintById, updateComplaintStatus, editComplaintDetails, deleteComplaint };
