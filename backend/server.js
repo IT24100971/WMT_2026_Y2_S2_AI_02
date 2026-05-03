@@ -21,12 +21,20 @@ mongoose.connect(process.env.MONGO_URI)
 // Import routes
 const authRoutes = require('./routes/authRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
-// ... other imports (products, inventory, etc.)
+const productRoutes = require('./routes/productRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
+const grnRoutes = require('./routes/grnRoutes');
+const shiftRoutes = require('./routes/shiftRoutes');
+const supplierRoutes = require('./routes/supplierRoutes');
 
 // Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/complaints', complaintRoutes);
-// ... other route usages
+app.use('/api/products', productRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/grns', grnRoutes);
+app.use('/api/shifts', shiftRoutes);
+app.use('/api/suppliers', supplierRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
