@@ -25,7 +25,7 @@ export default function AddSupplierScreen({ navigation }) {
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [showSuccess, setShowSuccess] = useState(false);
+  
 
   // Fetch products on mount
   useEffect(() => {
@@ -123,7 +123,9 @@ export default function AddSupplierScreen({ navigation }) {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      setShowSuccess(true);
+      Alert.alert('Success! ✅', 'Supplier created successfully.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     } catch (err) {
       const message = err.response?.data?.message || 'Failed to create supplier. Please try again.';
       Alert.alert('Error', message);
@@ -308,22 +310,7 @@ export default function AddSupplierScreen({ navigation }) {
         </View>
       </Modal>
 
-      {/* Success Modal */}
-      <Modal visible={showSuccess} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalIcon}>✅</Text>
-            <Text style={styles.modalTitle}>Success!</Text>
-            <Text style={styles.modalText}>Supplier created successfully.</Text>
-            <TouchableOpacity
-              style={styles.modalBtn}
-              onPress={() => { setShowSuccess(false); navigation.goBack(); }}
-            >
-              <Text style={styles.modalBtnText}>OK</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Success handled via Alert to match other modules */}
 
     </ScrollView>
   );

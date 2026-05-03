@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator
+  ScrollView, Alert, ActivityIndicator, FlatList, Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';  // add this line
 import * as DocumentPicker from 'expo-document-picker';
 import { BASE_URL } from '../../context/AuthContext';
 
@@ -18,6 +19,7 @@ export default function AddInventoryScreen({ navigation }) {
   const [maxStock, setMaxStock] = useState('');
   const [warehouseLocation, setWarehouseLocation] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [stockReport, setStockReport] = useState(null);  // ← new
   const [loading, setLoading] = useState(false);
 
@@ -57,6 +59,15 @@ export default function AddInventoryScreen({ navigation }) {
       Alert.alert('Error', 'Failed to pick document');
     }
   };
+  const onDateChange = (event, selectedDate) => {
+  setShowDatePicker(Platform.OS === 'ios');
+  if (selectedDate) setExpiryDate(selectedDate);
+};
+
+const formatDate = (date) => {
+  if (!date) return null;
+  return date.toISOString().split('T')[0];
+};
 
   const validate = () => {
     if (!selectedProduct) return 'Please select a product';
@@ -85,7 +96,7 @@ export default function AddInventoryScreen({ navigation }) {
       formData.append('reorderLevel', String(Number(reorderLevel)));
       formData.append('maxStock', String(Number(maxStock)));
       if (warehouseLocation) formData.append('warehouseLocation', warehouseLocation);
-      if (expiryDate) formData.append('expiryDate', expiryDate);
+      if (expiryDate) formData.append('expiryDate', formatDate(expiryDate));
       if (stockReport) {
         formData.append('stockReport', {
           uri: stockReport.uri,
@@ -139,23 +150,29 @@ export default function AddInventoryScreen({ navigation }) {
             onChangeText={setProductSearch}
             placeholderTextColor="#999"
           />
-          {filteredProducts.map(p => (
-            <TouchableOpacity
-              key={p._id}
-              style={styles.dropdownItem}
-              onPress={() => {
-                setSelectedProduct(p);
-                setShowProductList(false);
-                setProductSearch('');
-              }}
-            >
-              <Text style={styles.dropdownItemName}>{p.name}</Text>
-              <Text style={styles.dropdownItemSub}>{p.barcode} • {p.category}</Text>
-            </TouchableOpacity>
-          ))}
-          {filteredProducts.length === 0 && (
-            <Text style={styles.noResults}>No products found</Text>
-          )}
+           <FlatList
+  data={filteredProducts}
+  keyExtractor={p => p._id}
+  style={styles.productFlatList}
+  nestedScrollEnabled={true}
+  keyboardShouldPersistTaps="handled"
+  renderItem={({ item: p }) => (
+    <TouchableOpacity
+      style={styles.dropdownItem}
+      onPress={() => {
+        setSelectedProduct(p);
+        setShowProductList(false);
+        setProductSearch('');
+      }}
+    >
+      <Text style={styles.dropdownItemName}>{p.name}</Text>
+      <Text style={styles.dropdownItemSub}>{p.barcode} • {p.category}</Text>
+    </TouchableOpacity>
+  )}
+  ListEmptyComponent={
+    <Text style={styles.noResults}>No products found</Text>
+  }
+/>
         </View>
       )}
 
@@ -182,8 +199,30 @@ export default function AddInventoryScreen({ navigation }) {
         placeholder="e.g. Aisle 3, Shelf B" placeholderTextColor="#bbb" />
 
       <Text style={styles.label}>Expiry Date (Optional)</Text>
-      <TextInput style={styles.input} value={expiryDate} onChangeText={setExpiryDate}
-        placeholder="YYYY-MM-DD" placeholderTextColor="#bbb" />
+      <TouchableOpacity
+  style={styles.dateSelector}
+  onPress={() => setShowDatePicker(true)}
+>
+  <Text style={styles.dateIcon}>📅</Text>
+  <Text style={expiryDate ? styles.dateText : styles.datePlaceholder}>
+    {expiryDate ? formatDate(expiryDate) : 'Select expiry date...'}
+  </Text>
+  {expiryDate && (
+    <TouchableOpacity onPress={() => setExpiryDate(null)}>
+      <Text style={styles.dateClear}>✕</Text>
+    </TouchableOpacity>
+  )}
+</TouchableOpacity>
+
+{showDatePicker && (
+  <DateTimePicker
+    value={expiryDate || new Date()}
+    mode="date"
+    display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
+    minimumDate={new Date()}
+    onChange={onDateChange}
+  />
+)}
 
       {/* ── Stock Report Upload ── */}
       <Text style={styles.label}>Stock Report (Optional)</Text>
@@ -221,7 +260,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 16 },
   sectionTitle: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', marginBottom: 20 },
   label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 6, marginTop: 14 },
-  required: { color: '#F97316' },
+  required: { color: '#d32f2f' },
   input: {
     backgroundColor: '#f7f7f7', borderRadius: 10, paddingHorizontal: 14,
     paddingVertical: 12, fontSize: 15, color: '#1a1a1a',
@@ -236,11 +275,12 @@ const styles = StyleSheet.create({
   },
   selectorText: { fontSize: 15, color: '#1a1a1a' },
   selectorPlaceholder: { fontSize: 15, color: '#bbb' },
-  selectorArrow: { color: '#F97316', fontWeight: '700' },
+  selectorArrow: { color: '#1976d2', fontWeight: '700' },
   dropdown: {
-    backgroundColor: '#fff', borderRadius: 10, borderWidth: 1,
-    borderColor: '#e0e0e0', marginTop: 4, maxHeight: 220, overflow: 'hidden', elevation: 4
-  },
+  backgroundColor: '#fff', borderRadius: 10, borderWidth: 1,
+  borderColor: '#e0e0e0', marginTop: 4, elevation: 4,
+  maxHeight: 250,
+},
   dropdownSearch: { padding: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', fontSize: 14, color: '#333' },
   dropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#f5f5f5' },
   dropdownItemName: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
@@ -259,6 +299,17 @@ const styles = StyleSheet.create({
   fileIcon: { fontSize: 22 },
   fileName: { flex: 1, fontSize: 13, color: '#1a1a1a', fontWeight: '500' },
   fileRemove: { fontSize: 16, color: '#c62828', fontWeight: '700', paddingHorizontal: 4 },
-  createBtn: { backgroundColor: '#F97316', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
+  createBtn: { backgroundColor: '#1976d2', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 28 },
   createBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
+   productFlatList: { flexGrow: 0 },
+dateSelector: {
+  backgroundColor: '#f7f7f7', borderRadius: 10, paddingHorizontal: 14,
+  paddingVertical: 14, borderWidth: 1, borderColor: '#e0e0e0',
+  flexDirection: 'row', alignItems: 'center', gap: 10
+},
+dateIcon: { fontSize: 18 },
+dateText: { flex: 1, fontSize: 15, color: '#1a1a1a' },
+datePlaceholder: { flex: 1, fontSize: 15, color: '#bbb' },
+dateClear: { fontSize: 16, color: '#c62828', fontWeight: '700', paddingHorizontal: 4 },
 });

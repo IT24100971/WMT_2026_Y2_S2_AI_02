@@ -1,7 +1,5 @@
 // App.js
 // Main navigation file. Controls which screens are shown.
-// Changes from original: replaced ProductsScreen placeholder with real screens,
-// and added AddProduct + EditProduct to the AppStack navigator.
 
 import 'react-native-gesture-handler';
 import React from 'react';
@@ -15,27 +13,30 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './src/screens/HomeScreen';
 
-// ── YOUR SCREENS (Student 1 — Products) ──────────────────
+// ── STUDENT 1: Products ──────────────────
 import ProductListScreen from './src/screens/products/ProductListScreen';
 import AddProductScreen from './src/screens/products/AddProductScreen';
 import EditProductScreen from './src/screens/products/EditProductScreen';
-// ─────────────────────────────────────────────────────────
 
-// ── YOUR SCREENS (Student 2— Inventory)──────────
+// ── STUDENT 2: Inventory ──────────
 import InventoryListScreen from './src/screens/inventory/InventoryListScreen';
 import AddInventoryScreen  from './src/screens/inventory/AddInventoryScreen';
 import EditStockScreen     from './src/screens/inventory/EditStockScreen';
-// ── SUPPLIER MANAGEMENT SCREENS (Student 3) ──────────
+// ── STUDENT 3: Suppliers ──────────
 import SupplierListScreen from './src/screens/suppliers/SupplierListScreen';
 import AddSupplierScreen from './src/screens/suppliers/AddSupplierScreen';
 import EditSupplierScreen from './src/screens/suppliers/EditSupplierScreen';
 import ViewSupplierScreen from './src/screens/suppliers/ViewSupplierScreen';
 
-// ── YOUR SCREENS (Student 3 — Shifts) ────────────────────
+// ── STUDENT 4: Shifts ────────────────────
 import ShiftListScreen from './src/screens/shifts/ShiftListScreen';
 import AddShiftScreen from './src/screens/shifts/AddShiftScreen';
 import EditShiftScreen from './src/screens/shifts/EditShiftScreen';
-// Placeholder for other students' modules (they will replace these)
+
+// ── STUDENT 5: Complaints ──────────
+import ComplaintListScreen from './src/screens/Complaints/ComplaintListScreen';
+import AddComplaintScreen from './src/screens/Complaints/AddComplaintScreen';
+import EditComplaintScreen from './src/screens/Complaints/EditComplaintScreen';
 const PlaceholderScreen = ({ title }) => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
     <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#ff6b00', marginBottom: 20 }}>{title}</Text>
@@ -46,7 +47,6 @@ const PlaceholderScreen = ({ title }) => (
   </View>
 );
 
-function ComplaintsScreen() { return <PlaceholderScreen title="⚠️ Complaint Management" />; }
 function GRNScreen() { return <PlaceholderScreen title="📄 GRN Management" />; }
 
 const Stack = createStackNavigator();
@@ -72,127 +72,33 @@ function AppStack() {
       {/* Home */}
       <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Sunrise Super' }} />
 
-      {/* ── YOUR SCREENS ─────────────────────────────────── */}
-      <Stack.Screen
-        name="Products"
-        component={ProductListScreen}
-        options={{ title: 'Product Management' }}
-      />
-      <Stack.Screen
-        name="AddProduct"
-        component={AddProductScreen}
-        options={{ title: 'Add New Product' }}
-      />
-      <Stack.Screen
-        name="EditProduct"
-        component={EditProductScreen}
-        options={{ title: 'Edit Product' }}
-      />
-      {/* ─────────────────────────────────────────────────── */}
+      {/* ── PRODUCTS ─────────────────────────────────── */}
+      <Stack.Screen name="Products" component={ProductListScreen} options={{ title: 'Product Management' }} />
+      <Stack.Screen name="AddProduct" component={AddProductScreen} options={{ title: 'Add New Product' }} />
+      <Stack.Screen name="EditProduct" component={EditProductScreen} options={{ title: 'Edit Product' }} />
 
-      {/* Other students' screens (placeholders for now) */}
-      <Stack.Screen
-        name="Inventory"
-        component={InventoryListScreen}
-        options={{
-          title: 'Inventory Management',
-          headerStyle: { backgroundColor: '#F97316' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
-      />
-      <Stack.Screen
-        name="AddInventory"
-        component={AddInventoryScreen}
-        options={{
-          title: 'Add Inventory Record',
-          headerStyle: { backgroundColor: '#F97316' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
-      />
-      <Stack.Screen
-        name="EditStock"
-        component={EditStockScreen}
-        options={{
-          title: 'Edit Stock',
-          headerStyle: { backgroundColor: '#F97316' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
-      />
-      <Stack.Screen 
-        name="Suppliers" 
-        component={SupplierListScreen} 
-        options={{ 
-          title: 'Supplier Management',
-          headerStyle: { backgroundColor: '#4CAF50' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }} 
-      />
-      <Stack.Screen 
-        name="AddSupplier" 
-        component={AddSupplierScreen} 
-        options={{ 
-          title: 'Add New Supplier',
-          headerStyle: { backgroundColor: '#4CAF50' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }} 
-      />
-      <Stack.Screen 
-        name="ViewSupplier" 
-        component={ViewSupplierScreen} 
-        options={{ 
-          title: 'Supplier Details',
-          headerStyle: { backgroundColor: '#4CAF50' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }} 
-      />
-      <Stack.Screen 
-        name="EditSupplier" 
-        component={EditSupplierScreen} 
-        options={{ 
-          title: 'Edit Supplier',
-          headerStyle: { backgroundColor: '#4CAF50' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }} 
-      />
-      <Stack.Screen
-        name="Shifts"
-        component={ShiftListScreen}
-        options={{
-          title: '⏰ Shift Management',
-          headerStyle: { backgroundColor: '#6A1B9A' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
-      />
-      <Stack.Screen
-        name="AddShift"
-        component={AddShiftScreen}
-        options={{
-          title: 'Create New Shift',
-          headerStyle: { backgroundColor: '#6A1B9A' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
-      />
-      <Stack.Screen
-        name="EditShift"
-        component={EditShiftScreen}
-        options={{
-          title: 'Edit Shift',
-          headerStyle: { backgroundColor: '#6A1B9A' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: '700' },
-        }}
-      />
-      <Stack.Screen name="Complaints" component={ComplaintsScreen} options={{ title: 'Complaint Management' }} />
+      {/* ── SUPPLIERS ─────────────────────────────────── */}
+      <Stack.Screen name="Suppliers" component={SupplierListScreen} options={{ title: 'Supplier Management', headerStyle: { backgroundColor: '#4CAF50' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AddSupplier" component={AddSupplierScreen} options={{ title: 'Add New Supplier', headerStyle: { backgroundColor: '#4CAF50' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="ViewSupplier" component={ViewSupplierScreen} options={{ title: 'Supplier Details', headerStyle: { backgroundColor: '#4CAF50' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="EditSupplier" component={EditSupplierScreen} options={{ title: 'Edit Supplier', headerStyle: { backgroundColor: '#4CAF50' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+
+      {/* ── INVENTORY ─────────────────────────────────── */}
+      <Stack.Screen name="Inventory" component={InventoryListScreen} options={{ title: 'Inventory Management', headerStyle: { backgroundColor: '#1976d2' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AddInventory" component={AddInventoryScreen} options={{ title: 'Add Inventory Record', headerStyle: { backgroundColor: '#1976d2' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="EditStock" component={EditStockScreen} options={{ title: 'Edit Stock', headerStyle: { backgroundColor: '#1976d2' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+
+      {/* ── SHIFTS ─────────────────────────────────── */}
+      <Stack.Screen name="Shifts" component={ShiftListScreen} options={{ title: '⏰ Shift Management', headerStyle: { backgroundColor: '#6A1B9A' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AddShift" component={AddShiftScreen} options={{ title: 'Create New Shift', headerStyle: { backgroundColor: '#6A1B9A' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="EditShift" component={EditShiftScreen} options={{ title: 'Edit Shift', headerStyle: { backgroundColor: '#6A1B9A' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+
+      {/* ── COMPLAINTS (YOUR PART) ─────────────────────────────────── */}
+      <Stack.Screen name="Complaints" component={ComplaintListScreen} options={{ title: 'Complaint Management', headerStyle: { backgroundColor: '#F97316' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="AddComplaint" component={AddComplaintScreen} options={{ title: 'Add New Complaint', headerStyle: { backgroundColor: '#F97316' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
+      <Stack.Screen name="EditComplaint" component={EditComplaintScreen} options={{ title: 'Edit Complaint', headerStyle: { backgroundColor: '#F97316' }, headerTintColor: '#fff', headerTitleStyle: { fontWeight: '700' } }} />
       <Stack.Screen name="GRN" component={GRNScreen} options={{ title: 'GRN Management' }} />
+
     </Stack.Navigator>
   );
 }

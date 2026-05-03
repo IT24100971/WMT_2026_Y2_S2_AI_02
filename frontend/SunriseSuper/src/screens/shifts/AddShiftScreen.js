@@ -172,7 +172,7 @@ export default function AddShiftScreen({ navigation }) {
           <Text style={styles.modalTitle}>Select Employee</Text>
           
           {loadingUsers ? (
-            <ActivityIndicator size="large" color="#ff6b00" style={{ padding: 20 }} />
+            <ActivityIndicator size="large" color="#6A1B9A" style={{ padding: 20 }} />
           ) : (
             <>
               <FlatList
@@ -383,22 +383,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
     borderWidth: 1.5, borderColor: '#ddd', backgroundColor: '#f5f5f5',
   },
-  optionBtnActive: { backgroundColor: '#ff6b00', borderColor: '#ff6b00' },
+  optionBtnActive: { backgroundColor: '#6A1B9A', borderColor: '#6A1B9A' },
   optionBtnText: { color: '#555', fontSize: 13, fontWeight: '500' },
   optionBtnTextActive: { color: '#fff', fontWeight: '700' },
   imagePicker: {
-    borderWidth: 2, borderColor: '#ff6b00', borderStyle: 'dashed',
+    borderWidth: 2, borderColor: '#6A1B9A', borderStyle: 'dashed',
     borderRadius: 10, overflow: 'hidden', marginTop: 4,
   },
   imagePickerPlaceholder: { padding: 30, alignItems: 'center' },
   imagePickerIcon: { fontSize: 36, marginBottom: 8 },
-  imagePickerText: { color: '#ff6b00', fontWeight: '600', fontSize: 14 },
+  imagePickerText: { color: '#6A1B9A', fontWeight: '600', fontSize: 14 },
   fileSelectedBox: { padding: 16 },
   fileName: { fontSize: 14, fontWeight: '600', color: '#333' },
   fileMeta: { marginTop: 6, fontSize: 12, color: '#777' },
   removeImageText: { color: '#d32f2f', fontSize: 13, marginTop: 6, textAlign: 'center' },
   submitBtn: {
-    backgroundColor: '#ff6b00', padding: 16, borderRadius: 10,
+    backgroundColor: '#6A1B9A', padding: 16, borderRadius: 10,
     alignItems: 'center', marginTop: 28,
   },
   submitBtnDisabled: { opacity: 0.6 },
@@ -418,9 +418,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: '#eee',
   },
   userName: { fontSize: 16, fontWeight: '500', color: '#333' },
-  userRole: { fontSize: 13, color: '#ff6b00', marginTop: 2 },
+  userRole: { fontSize: 13, color: '#6A1B9A', marginTop: 2 },
   closeModalBtn: {
-    backgroundColor: '#ff6b00', padding: 12, borderRadius: 8,
+    backgroundColor: '#6A1B9A', padding: 12, borderRadius: 8,
     marginTop: 16, alignItems: 'center',
   },
   closeModalText: { color: '#fff', fontWeight: 'bold' },
