@@ -1,6 +1,10 @@
 const Supplier = require('../models/Supplier');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// Ensure the contracts upload directory exists on Render
+fs.mkdirSync('./uploads/contracts', { recursive: true });
 
 const storage = multer.diskStorage({
   destination: './uploads/contracts/',
