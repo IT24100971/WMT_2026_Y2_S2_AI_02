@@ -2,34 +2,25 @@ const GRN = require('../models/GRN');
 const Supplier = require('../models/Supplier');
 const Product = require('../models/Product');
 const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 
-// ============ IMAGE UPLOAD CONFIGURATION ============
-const grnUploadDir = path.join(__dirname, '..', 'uploads', 'grn');
-if (!fs.existsSync(grnUploadDir)) {
-  fs.mkdirSync(grnUploadDir, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, grnUploadDir),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'grn-' + uniqueSuffix + path.extname(file.originalname));
-  }
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif/;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = allowedTypes.test(file.mimetype);
-  if (mimetype && extname) return cb(null, true);
-  cb(new Error('Only image files are allowed (jpeg, jpg, png, gif)'));
-};
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'sunrise-supermarket/grn',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+  },
+});
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } }).array('grnImages', 4);
+const upload = multer({ storage }).array('grnImages', 4);
 
-// ============ HELPERS ============
 const generateGRNNumber = () => {
   const date = new Date();
   const year = date.getFullYear();
@@ -41,20 +32,10 @@ const generateGRNNumber = () => {
   return `GRN-${year}${month}${day}-${hours}${minutes}${seconds}`;
 };
 
-// Convert disk path to stored relative path used by frontend
-const relativePath = (file) => path.join('uploads', 'grn', path.basename(file.filename)).replace(/\\/g, '/');
-
 const parseExistingImages = (value) => {
   if (!value) return [];
-
-  if (Array.isArray(value)) {
-    return value.filter(Boolean);
-  }
-
-  if (typeof value !== 'string') {
-    return [];
-  }
-
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value !== 'string') return [];
   try {
     const parsed = JSON.parse(value);
     return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
@@ -63,16 +44,6 @@ const parseExistingImages = (value) => {
   }
 };
 
-const deleteImageFromDisk = (storedPath) => {
-  if (!storedPath) return;
-
-  const filePath = path.join(__dirname, '..', storedPath);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
-};
-
-// ============ CONTROLLERS ============
 const createGRN = (req, res) => {
   upload(req, res, async (err) => {
     if (err) return res.status(400).json({ message: err.message });
@@ -91,7 +62,7 @@ const createGRN = (req, res) => {
       if (!product) return res.status(404).json({ message: 'Product not found' });
 
       const files = req.files || [];
-      const images = files.map(f => relativePath(f));
+      const images = files.map(f => f.path);
 
       const grn = new GRN({
         grnNumber: generateGRNNumber(),
@@ -185,7 +156,7 @@ const updateGRN = (req, res) => {
       if (notes !== undefined) grn.notes = notes;
 
       const files = req.files || [];
-      const uploadedImages = files.map(f => relativePath(f));
+      const uploadedImages = files.map(f => f.path);
       const existingImages = parseExistingImages(req.body.existingImages);
       const previousImages = Array.isArray(grn.images) ? grn.images : (grn.image ? [grn.image] : []);
       const hasExistingImagesPayload = req.body.existingImages !== undefined;
@@ -195,9 +166,6 @@ const updateGRN = (req, res) => {
         ...uploadedImages,
         ...(!hasExistingImagesPayload ? previousImages : [])
       ]));
-
-      const removedImages = previousImages.filter(img => !finalImages.includes(img));
-      removedImages.forEach(deleteImageFromDisk);
 
       grn.images = finalImages;
       grn.image = finalImages[0] || null;
@@ -220,15 +188,6 @@ const deleteGRN = async (req, res) => {
   try {
     const grn = await GRN.findById(req.params.id);
     if (!grn) return res.status(404).json({ message: 'GRN not found' });
-
-    // Remove images from disk
-    if (Array.isArray(grn.images)) {
-      grn.images.forEach(img => {
-        const imgPath = path.join(__dirname, '..', img);
-        if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-      });
-    }
-
     await GRN.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: 'GRN deleted' });
   } catch (error) {

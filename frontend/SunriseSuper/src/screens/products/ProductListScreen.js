@@ -1,9 +1,3 @@
-// ProductListScreen.js
-// Main screen for Product Management. Shows all products fetched from the API.
-// Features: search bar, category filter buttons, edit/delete per item, + FAB to add.
-// useFocusEffect re-fetches data every time this screen comes into view so the
-// list always reflects the latest state after adding or editing a product.
-
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet,
@@ -13,10 +7,6 @@ import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
 import { BASE_URL } from '../../context/AuthContext';
 
-// SERVER_URL is the base without /api — needed to build full image URLs.
-// e.g. BASE_URL = "http://192.168.1.5:5000/api"
-// So SERVER_URL = "http://192.168.1.5:5000"
-// And an image at uploads/123-product.jpg becomes http://192.168.1.5:5000/uploads/123-product.jpg
 const SERVER_URL = BASE_URL.replace('/api', '');
 
 const CATEGORIES = [
@@ -32,8 +22,6 @@ export default function ProductListScreen({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchText, setSearchText] = useState('');
 
-  // fetchProducts calls the backend. If a category is selected (not 'All'),
-  // it adds ?category=Rice to the URL so the backend filters it server-side.
   const fetchProducts = async () => {
     try {
       setLoading(true);
@@ -50,14 +38,12 @@ export default function ProductListScreen({ navigation }) {
     }
   };
 
-  // Runs every time this screen becomes active (e.g. returning from Add/Edit)
   useFocusEffect(
     useCallback(() => {
       fetchProducts();
     }, [selectedCategory])
   );
 
-  // Shows confirmation dialog before deleting
   const handleDelete = (id, name) => {
     Alert.alert(
       'Delete Product',
@@ -70,7 +56,6 @@ export default function ProductListScreen({ navigation }) {
           onPress: async () => {
             try {
               await axios.delete(`${BASE_URL}/products/${id}`);
-              // Remove from local state instantly — no need to re-fetch
               setProducts(prev => prev.filter(p => p._id !== id));
               Alert.alert('Deleted', `"${name}" has been deleted.`);
             } catch (err) {
@@ -82,18 +67,22 @@ export default function ProductListScreen({ navigation }) {
     );
   };
 
-  // Client-side search filter on top of category-filtered results
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchText.toLowerCase()) ||
     p.barcode.toLowerCase().includes(searchText.toLowerCase())
   );
 
+  const getImageUri = (image) => {
+    if (!image) return null;
+    if (image.startsWith('http')) return image;
+    return `${SERVER_URL}/${image}`;
+  };
+
   const renderItem = ({ item }) => (
     <View style={styles.card}>
-      {/* Product Image */}
       {item.image ? (
         <Image
-          source={{ uri: `${SERVER_URL}/${item.image}` }}
+          source={{ uri: getImageUri(item.image) }}
           style={styles.productImage}
           resizeMode="cover"
         />
@@ -103,7 +92,6 @@ export default function ProductListScreen({ navigation }) {
         </View>
       )}
 
-      {/* Product Info */}
       <View style={styles.cardContent}>
         <Text style={styles.productName}>{item.name}</Text>
         <View style={styles.categoryBadge}>
@@ -114,7 +102,6 @@ export default function ProductListScreen({ navigation }) {
         <Text style={styles.price}>Rs. {item.sellingPrice} / {item.unit}</Text>
         <Text style={styles.costPrice}>Cost: Rs. {item.costPrice}</Text>
 
-        {/* Action Buttons */}
         <View style={styles.cardActions}>
           <TouchableOpacity
             style={[styles.actionBtn, styles.editBtn]}
@@ -155,8 +142,6 @@ export default function ProductListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-
-      {/* Search Bar */}
       <TextInput
         style={styles.searchInput}
         placeholder="🔍 Search by name or barcode..."
@@ -165,7 +150,6 @@ export default function ProductListScreen({ navigation }) {
         placeholderTextColor="#aaa"
       />
 
-      {/* Category Filter Buttons */}
       <View style={styles.categoryRow}>
         {CATEGORIES.map(cat => (
           <TouchableOpacity
@@ -180,12 +164,10 @@ export default function ProductListScreen({ navigation }) {
         ))}
       </View>
 
-      {/* Product Count */}
       <Text style={styles.countText}>
         {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} found
       </Text>
 
-      {/* Product List */}
       <FlatList
         data={filteredProducts}
         keyExtractor={item => item._id}
@@ -199,7 +181,6 @@ export default function ProductListScreen({ navigation }) {
         }
       />
 
-      {/* Floating Add Button */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => navigation.navigate('AddProduct')}

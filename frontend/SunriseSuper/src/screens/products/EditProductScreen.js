@@ -1,8 +1,3 @@
-// EditProductScreen.js
-// Same form as AddProductScreen but pre-filled with existing product data.
-// Receives the full product object via route.params.product (passed from ProductListScreen).
-// On submit, sends a PUT request to update the product.
-
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
@@ -21,11 +16,8 @@ const CATEGORIES = [
 const UNITS = ['kg', 'L', 'pcs'];
 
 export default function EditProductScreen({ route, navigation }) {
-  // The full product object is passed when navigating from ProductListScreen:
-  // navigation.navigate('EditProduct', { product: item })
   const { product } = route.params;
 
-  // Pre-fill all fields with the existing product's values
   const [name, setName] = useState(product.name);
   const [category, setCategory] = useState(product.category);
   const [barcode, setBarcode] = useState(product.barcode);
@@ -33,14 +25,10 @@ export default function EditProductScreen({ route, navigation }) {
   const [sellingPrice, setSellingPrice] = useState(String(product.sellingPrice));
   const [costPrice, setCostPrice] = useState(String(product.costPrice));
   const [description, setDescription] = useState(product.description || '');
-  const [newImage, setNewImage] = useState(null); // only set if user picks a NEW image
+  const [newImage, setNewImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  // Opens the phone's image gallery after requesting permission.
-  // We intentionally do NOT pass a mediaTypes option — expo-image-picker
-  // defaults to images when omitted, and this avoids the silent crash caused
-  // by the deprecated MediaTypeOptions.Images or the wrong-case MediaType.Images.
   const pickImage = async () => {
     const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!granted) {
@@ -80,8 +68,6 @@ export default function EditProductScreen({ route, navigation }) {
     setLoading(true);
 
     try {
-      // If a new image was picked, we must use FormData (multipart) to send it.
-      // If no new image, we can use regular JSON — simpler and faster.
       if (newImage) {
         const formData = new FormData();
         formData.append('name', name);
@@ -100,7 +86,6 @@ export default function EditProductScreen({ route, navigation }) {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
       } else {
-        // No new image — regular JSON update
         await axios.put(`${BASE_URL}/products/${product._id}`, {
           name, category, barcode, unit, description,
           sellingPrice: Number(sellingPrice),
@@ -119,21 +104,22 @@ export default function EditProductScreen({ route, navigation }) {
     }
   };
 
-  // Determine what image to display:
-  // - If user picked a new image → show that
-  // - If product already has an image → show it from server
-  // - Otherwise → show placeholder
+  const getExistingImageUri = (image) => {
+    if (!image) return null;
+    if (image.startsWith('http')) return image;
+    return `${SERVER_URL}/${image}`;
+  };
+
   const displayImage = newImage
     ? { uri: newImage.uri }
     : product.image
-    ? { uri: `${SERVER_URL}/${product.image}` }
+    ? { uri: getExistingImageUri(product.image) }
     : null;
 
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.sectionTitle}>Edit Product</Text>
 
-      {/* Product Name */}
       <Text style={styles.label}>Product Name <Text style={styles.required}>*</Text></Text>
       <TextInput
         style={[styles.input, errors.name && styles.inputError]}
@@ -142,7 +128,6 @@ export default function EditProductScreen({ route, navigation }) {
       />
       {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
 
-      {/* Category */}
       <Text style={styles.label}>Category <Text style={styles.required}>*</Text></Text>
       <View style={styles.optionRow}>
         {CATEGORIES.map(c => (
@@ -157,7 +142,6 @@ export default function EditProductScreen({ route, navigation }) {
       </View>
       {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
 
-      {/* Barcode */}
       <Text style={styles.label}>Barcode <Text style={styles.required}>*</Text></Text>
       <TextInput
         style={[styles.input, errors.barcode && styles.inputError]}
@@ -166,7 +150,6 @@ export default function EditProductScreen({ route, navigation }) {
       />
       {errors.barcode && <Text style={styles.errorText}>{errors.barcode}</Text>}
 
-      {/* Unit */}
       <Text style={styles.label}>Unit <Text style={styles.required}>*</Text></Text>
       <View style={styles.optionRow}>
         {UNITS.map(u => (
@@ -181,7 +164,6 @@ export default function EditProductScreen({ route, navigation }) {
       </View>
       {errors.unit && <Text style={styles.errorText}>{errors.unit}</Text>}
 
-      {/* Prices */}
       <View style={styles.priceRow}>
         <View style={{ flex: 1, marginRight: 8 }}>
           <Text style={styles.label}>Selling Price (Rs.) <Text style={styles.required}>*</Text></Text>
@@ -205,7 +187,6 @@ export default function EditProductScreen({ route, navigation }) {
         </View>
       </View>
 
-      {/* Description */}
       <Text style={styles.label}>Description (Optional)</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
@@ -215,7 +196,6 @@ export default function EditProductScreen({ route, navigation }) {
         numberOfLines={3}
       />
 
-      {/* Image */}
       <Text style={styles.label}>Product Image</Text>
       <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
         {displayImage ? (
@@ -233,7 +213,6 @@ export default function EditProductScreen({ route, navigation }) {
         </TouchableOpacity>
       )}
 
-      {/* Submit */}
       <TouchableOpacity
         style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
         onPress={handleUpdate}

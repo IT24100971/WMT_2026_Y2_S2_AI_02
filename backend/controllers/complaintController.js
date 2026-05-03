@@ -1,14 +1,23 @@
 const Complaint = require('../models/Complaint');
 const multer = require('multer');
-const path = require('path');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 
-const storage = multer.diskStorage({
-  destination: './uploads/evidence/',
-  filename: (req, file, cb) => {
-    cb(null, 'evidence-' + Date.now() + path.extname(file.originalname));
-  }
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-const upload = multer({ storage }).single('evidenceImage');
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'sunrise-supermarket/complaints',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+  },
+});
+
+const uploadMiddleware = multer({ storage }).single('evidenceImage');
 
 const toBoolean = (value) => {
   if (typeof value === 'boolean') return value;
@@ -21,9 +30,9 @@ const toBoolean = (value) => {
 };
 
 const createComplaint = async (req, res) => {
-  upload(req, res, async (err) => {
+  uploadMiddleware(req, res, async (err) => {
     if (err) return res.status(400).json({ message: err.message });
-    
+
     try {
       const complaintData = {
         ...req.body,
@@ -32,11 +41,10 @@ const createComplaint = async (req, res) => {
       if (typeof req.body.isAnonymous !== 'undefined') {
         complaintData.isAnonymous = toBoolean(req.body.isAnonymous);
       }
-        if (req.file) {
-          // Normalize path to use forward slashes for URLs
-          complaintData.evidenceImage = req.file.path.replace(/\\/g, '/');
-        }
-      
+      if (req.file) {
+        complaintData.evidenceImage = req.file.path;
+      }
+
       const complaint = await Complaint.create(complaintData);
       res.status(201).json(complaint);
     } catch (error) {
@@ -52,12 +60,11 @@ const getComplaints = async (req, res) => {
     if (status) filter.status = status;
     if (category) filter.category = category;
     if (date) {
-      // expect date in YYYY-MM-DD, filter createdAt between start and end of day
       const start = new Date(date + 'T00:00:00.000Z');
       const end = new Date(date + 'T23:59:59.999Z');
       filter.createdAt = { $gte: start, $lte: end };
     }
-    
+
     const complaints = await Complaint.find(filter)
       .populate('raisedBy', 'fullName email')
       .populate('assignedTo', 'fullName email');
@@ -85,7 +92,6 @@ const updateComplaintStatus = async (req, res) => {
     const complaint = await Complaint.findById(req.params.id);
     if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
 
-    // Permission: Resolved can be set by Admin/Supervisor or the worker who raised it
     if (status === 'Resolved') {
       const allowed = req.user.role === 'Admin' || req.user.role === 'Supervisor' || String(complaint.raisedBy) === String(req.user.id);
       if (!allowed) return res.status(403).json({ message: 'Not authorized to mark Resolved' });
@@ -95,7 +101,6 @@ const updateComplaintStatus = async (req, res) => {
     complaint.status = status;
     if (status === 'Resolved') complaint.resolvedAt = Date.now();
 
-    // push history entry
     complaint.history = complaint.history || [];
     complaint.history.push({ from: prev, to: status, by: req.user.id, role: req.user.role, at: Date.now() });
 
@@ -107,9 +112,8 @@ const updateComplaintStatus = async (req, res) => {
   }
 };
 
-// Edit complaint details (only the worker who submitted it can edit)
 const editComplaintDetails = async (req, res) => {
-  upload(req, res, async (err) => {
+  uploadMiddleware(req, res, async (err) => {
     if (err) return res.status(400).json({ message: err.message });
     try {
       const complaint = await Complaint.findById(req.params.id);
@@ -130,11 +134,10 @@ const editComplaintDetails = async (req, res) => {
       if (typeof isAnonymous !== 'undefined') {
         complaint.isAnonymous = toBoolean(isAnonymous);
       }
-      if (req.file) complaint.evidenceImage = req.file.path.replace(/\\/g, '/');
+      if (req.file) complaint.evidenceImage = req.file.path;
       complaint.editedAt = Date.now();
       complaint.editedBy = req.user.id;
 
-      // record edit in history
       complaint.history = complaint.history || [];
       complaint.history.push({ from: 'Edited', to: 'Edited', by: req.user.id, role: req.user.role, at: Date.now(), note: 'Details edited' });
 
@@ -151,13 +154,12 @@ const deleteComplaint = async (req, res) => {
   try {
     const complaint = await Complaint.findById(req.params.id);
     if (!complaint) return res.status(404).json({ message: 'Complaint not found' });
-    // Workers may always delete their own complaint
+
     if (String(complaint.raisedBy) === String(req.user.id)) {
       await Complaint.findByIdAndDelete(req.params.id);
       return res.json({ message: 'Complaint deleted by owner' });
     }
 
-    // Admin/Supervisor can delete only when BOTH the worker and an admin/supervisor marked it Resolved
     if (req.user.role === 'Admin' || req.user.role === 'Supervisor') {
       const history = complaint.history || [];
       const workerResolved = history.some(h => h.to === 'Resolved' && String(h.by) === String(complaint.raisedBy));
@@ -169,7 +171,6 @@ const deleteComplaint = async (req, res) => {
       return res.status(403).json({ message: 'Admin/Supervisor can delete only after both worker and admin have marked Resolved' });
     }
 
-    // All others not permitted
     return res.status(403).json({ message: 'Not authorized to delete complaint' });
   } catch (error) {
     res.status(500).json({ message: error.message });

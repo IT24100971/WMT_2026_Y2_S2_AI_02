@@ -13,6 +13,15 @@ const UNITS = ['kg', 'L', 'pcs'];
 const MAX_IMAGES = 4;
 const SERVER_URL = BASE_URL.replace('/api', '');
 
+const getImageUri = (img) => {
+  if (!img) return null;
+  if (typeof img === 'string') {
+    if (img.startsWith('http')) return img;
+    return `${SERVER_URL}/${img}`;
+  }
+  return img.uri;
+};
+
 export default function CreateGRNScreen({ navigation, route }) {
   const editGRN = route?.params?.grn;
   const isEditMode = !!editGRN;
@@ -84,7 +93,6 @@ export default function CreateGRNScreen({ navigation, route }) {
       setAllSuppliers(suppRes.data || []);
       const products = prodRes.data.data || prodRes.data || [];
       setAllProducts(Array.isArray(products) ? products : []);
-      // Initialize with all products
       setFilteredProducts(Array.isArray(products) ? products : []);
     } catch (err) {
       console.log('Error fetching data:', err);
@@ -106,22 +114,14 @@ export default function CreateGRNScreen({ navigation, route }) {
           Alert.alert('Permission Required', 'Please allow access to your camera.');
           return;
         }
-        result = await ImagePicker.launchCameraAsync({
-          quality: 0.7,
-          allowsEditing: true,
-          aspect: [4, 3]
-        });
+        result = await ImagePicker.launchCameraAsync({ quality: 0.7, allowsEditing: true, aspect: [4, 3] });
       } else {
         const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!granted) {
           Alert.alert('Permission Required', 'Please allow access to your photo gallery.');
           return;
         }
-        result = await ImagePicker.launchImageLibraryAsync({
-          quality: 0.7,
-          allowsEditing: true,
-          aspect: [4, 3]
-        });
+        result = await ImagePicker.launchImageLibraryAsync({ quality: 0.7, allowsEditing: true, aspect: [4, 3] });
       }
 
       if (!result.canceled && result.assets[0]) {
@@ -134,35 +134,6 @@ export default function CreateGRNScreen({ navigation, route }) {
 
   const removeImage = (index) => {
     setImages(images.filter((_, i) => i !== index));
-  };
-
-  const handleSupplierSelect = (id) => {
-    setSupplierId(id);
-    setProductId('');
-    // Filter products by supplier
-    const supplier = allSuppliers.find(s => s._id === id);
-    if (supplier && supplier.productsSupplied && supplier.productsSupplied.length > 0) {
-      const filtered = allProducts.filter(p =>
-        supplier.productsSupplied.some(name => name.toLowerCase().trim() === p.name.toLowerCase().trim())
-      );
-      // If no products match, show all products instead
-      setFilteredProducts(filtered.length > 0 ? filtered : allProducts);
-    } else {
-      setFilteredProducts(allProducts);
-    }
-    setShowSupplierModal(false);
-    setErrors(e => ({ ...e, supplierId: '' }));
-  };
-
-  const handleProductSelect = (id) => {
-    setProductId(id);
-    setShowProductModal(false);
-    setErrors(e => ({ ...e, productId: '' }));
-  };
-
-  const handleConditionSelect = (cond) => {
-    setCondition(cond);
-    setShowConditionModal(false);
   };
 
   const validate = () => {
@@ -202,19 +173,19 @@ export default function CreateGRNScreen({ navigation, route }) {
       const existingImages = images.filter(img => typeof img === 'string');
       formData.append('existingImages', JSON.stringify(existingImages));
 
-      // Append images
       images.forEach((img, idx) => {
-        if (typeof img === 'string') {
-          return;
-        }
-        formData.append(`grnImages`, {
+        if (typeof img === 'string') return;
+        formData.append('grnImages', {
           uri: img.uri,
           type: 'image/jpeg',
           name: `grn_image_${idx}.jpg`
         });
       });
 
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const headers = {
+        'Content-Type': 'multipart/form-data',
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      };
       const res = isEditMode
         ? await axios.put(`${BASE_URL}/grn/${editGRN._id}`, formData, { headers, timeout: 20000 })
         : await axios.post(`${BASE_URL}/grn`, formData, { headers, timeout: 20000 });
@@ -232,14 +203,10 @@ export default function CreateGRNScreen({ navigation, route }) {
     }
   };
 
-  const selectedSupplier = allSuppliers.find(s => s._id === supplierId)?.supplierName || 'Select Supplier';
-  const selectedProduct = allProducts.find(p => p._id === productId)?.name || 'Select Product';
-
   return (
     <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <Text style={styles.sectionTitle}>{isEditMode ? 'Edit GRN' : 'Create GRN'}</Text>
 
-      {/* Supplier Selection */}
       <Text style={styles.label}>Supplier <Text style={styles.required}>*</Text></Text>
       <TouchableOpacity
         style={[styles.input, styles.selectButton, errors.supplierId && styles.inputError]}
@@ -251,7 +218,6 @@ export default function CreateGRNScreen({ navigation, route }) {
       </TouchableOpacity>
       {errors.supplierId && <Text style={styles.errorText}>{errors.supplierId}</Text>}
 
-      {/* Product Selection */}
       <Text style={styles.label}>Product <Text style={styles.required}>*</Text></Text>
       <TouchableOpacity
         style={[styles.input, styles.selectButton, errors.productId && styles.inputError, !supplierId && { opacity: 0.5 }]}
@@ -264,7 +230,6 @@ export default function CreateGRNScreen({ navigation, route }) {
       </TouchableOpacity>
       {errors.productId && <Text style={styles.errorText}>{errors.productId}</Text>}
 
-      {/* Invoiced Quantity */}
       <Text style={styles.label}>Invoiced Quantity <Text style={styles.required}>*</Text></Text>
       <TextInput
         style={[styles.input, errors.invoicedQty && styles.inputError]}
@@ -275,7 +240,6 @@ export default function CreateGRNScreen({ navigation, route }) {
       />
       {errors.invoicedQty && <Text style={styles.errorText}>{errors.invoicedQty}</Text>}
 
-      {/* Received Quantity */}
       <Text style={styles.label}>Received Quantity <Text style={styles.required}>*</Text></Text>
       <TextInput
         style={[styles.input, errors.receivedQty && styles.inputError]}
@@ -286,7 +250,6 @@ export default function CreateGRNScreen({ navigation, route }) {
       />
       {errors.receivedQty && <Text style={styles.errorText}>{errors.receivedQty}</Text>}
 
-      {/* Unit */}
       <Text style={styles.label}>Unit <Text style={styles.required}>*</Text></Text>
       <TouchableOpacity
         style={[styles.input, styles.selectButton, errors.unit && styles.inputError]}
@@ -296,7 +259,6 @@ export default function CreateGRNScreen({ navigation, route }) {
       </TouchableOpacity>
       {errors.unit && <Text style={styles.errorText}>{errors.unit}</Text>}
 
-      {/* Condition */}
       <Text style={styles.label}>Condition <Text style={styles.required}>*</Text></Text>
       <TouchableOpacity
         style={[styles.input, styles.selectButton]}
@@ -305,7 +267,6 @@ export default function CreateGRNScreen({ navigation, route }) {
         <Text style={{ color: '#333' }}>{condition}</Text>
       </TouchableOpacity>
 
-      {/* Notes */}
       <Text style={styles.label}>Notes</Text>
       <TextInput
         style={[styles.input, styles.notesInput]}
@@ -316,20 +277,15 @@ export default function CreateGRNScreen({ navigation, route }) {
         numberOfLines={4}
       />
 
-      {/* Images */}
       <Text style={styles.label}>Delivery Images <Text style={styles.required}>*</Text></Text>
       <Text style={styles.imageHint}>Upload up to {MAX_IMAGES} images (Camera or Gallery)</Text>
 
-      {/* Image Previews */}
       {images.length > 0 && (
         <View style={styles.imagePreviewContainer}>
           {images.map((img, idx) => (
             <View key={idx} style={styles.imagePreviewWrapper}>
-              <Image source={{ uri: typeof img === 'string' ? `${SERVER_URL}/${img}` : img.uri }} style={styles.imagePreview} />
-              <TouchableOpacity
-                style={styles.imageRemoveBtn}
-                onPress={() => removeImage(idx)}
-              >
+              <Image source={{ uri: getImageUri(img) }} style={styles.imagePreview} />
+              <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(idx)}>
                 <Text style={styles.imageRemoveBtnText}>✕</Text>
               </TouchableOpacity>
             </View>
@@ -337,38 +293,25 @@ export default function CreateGRNScreen({ navigation, route }) {
         </View>
       )}
 
-      {/* Image Upload Buttons */}
       {images.length < MAX_IMAGES && (
         <View style={styles.imageButtonRow}>
-          <TouchableOpacity
-            style={[styles.imageBtn, styles.imageBtnCamera]}
-            onPress={() => pickImage('camera')}
-          >
+          <TouchableOpacity style={[styles.imageBtn, styles.imageBtnCamera]} onPress={() => pickImage('camera')}>
             <Text style={styles.imageBtnText}>Take Photo</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.imageBtn, styles.imageBtnGallery]}
-            onPress={() => pickImage('gallery')}
-          >
+          <TouchableOpacity style={[styles.imageBtn, styles.imageBtnGallery]} onPress={() => pickImage('gallery')}>
             <Text style={styles.imageBtnText}>Choose File</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Submit Button */}
       <TouchableOpacity
         style={[styles.submitBtn, loading && { opacity: 0.6 }]}
         onPress={handleSubmit}
         disabled={loading}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.submitBtnText}>{isEditMode ? 'Update GRN' : 'Create GRN'}</Text>
-        )}
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitBtnText}>{isEditMode ? 'Update GRN' : 'Create GRN'}</Text>}
       </TouchableOpacity>
 
-      {/* Supplier Modal - Centered */}
       <Modal visible={showSupplierModal} transparent animationType="fade">
         <View style={styles.centeredModalOverlay}>
           <View style={styles.centeredModalContent}>
@@ -383,10 +326,7 @@ export default function CreateGRNScreen({ navigation, route }) {
               keyExtractor={item => item._id}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[
-                    styles.centeredModalItem,
-                    supplierId === item._id && styles.centeredModalItemSelected
-                  ]}
+                  style={[styles.centeredModalItem, supplierId === item._id && styles.centeredModalItemSelected]}
                   onPress={() => {
                     setSupplierId(item._id);
                     const supplier = allSuppliers.find(s => s._id === item._id);
@@ -403,12 +343,7 @@ export default function CreateGRNScreen({ navigation, route }) {
                     setErrors(e => ({ ...e, supplierId: '' }));
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.centeredModalItemText,
-                      supplierId === item._id && styles.centeredModalItemTextSelected
-                    ]}
-                  >
+                  <Text style={[styles.centeredModalItemText, supplierId === item._id && styles.centeredModalItemTextSelected]}>
                     {item.supplierName}
                   </Text>
                 </TouchableOpacity>
@@ -421,7 +356,6 @@ export default function CreateGRNScreen({ navigation, route }) {
         </View>
       </Modal>
 
-      {/* Product Modal - Centered */}
       <Modal visible={showProductModal} transparent animationType="fade">
         <View style={styles.centeredModalOverlay}>
           <View style={styles.centeredModalContent}>
@@ -436,22 +370,14 @@ export default function CreateGRNScreen({ navigation, route }) {
               keyExtractor={item => item._id}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[
-                    styles.centeredModalItem,
-                    productId === item._id && styles.centeredModalItemSelected
-                  ]}
+                  style={[styles.centeredModalItem, productId === item._id && styles.centeredModalItemSelected]}
                   onPress={() => {
                     setProductId(item._id);
                     setShowProductModal(false);
                     setErrors(e => ({ ...e, productId: '' }));
                   }}
                 >
-                  <Text
-                    style={[
-                      styles.centeredModalItemText,
-                      productId === item._id && styles.centeredModalItemTextSelected
-                    ]}
-                  >
+                  <Text style={[styles.centeredModalItemText, productId === item._id && styles.centeredModalItemTextSelected]}>
                     {item.name}
                   </Text>
                 </TouchableOpacity>
@@ -464,7 +390,6 @@ export default function CreateGRNScreen({ navigation, route }) {
         </View>
       </Modal>
 
-      {/* Condition Modal - Centered */}
       <Modal visible={showConditionModal} transparent animationType="fade">
         <View style={styles.centeredModalOverlay}>
           <View style={styles.centeredModalContent}>
@@ -479,21 +404,10 @@ export default function CreateGRNScreen({ navigation, route }) {
               keyExtractor={item => item}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[
-                    styles.centeredModalItem,
-                    condition === item && styles.centeredModalItemSelected
-                  ]}
-                  onPress={() => {
-                    setCondition(item);
-                    setShowConditionModal(false);
-                  }}
+                  style={[styles.centeredModalItem, condition === item && styles.centeredModalItemSelected]}
+                  onPress={() => { setCondition(item); setShowConditionModal(false); }}
                 >
-                  <Text
-                    style={[
-                      styles.centeredModalItemText,
-                      condition === item && styles.centeredModalItemTextSelected
-                    ]}
-                  >
+                  <Text style={[styles.centeredModalItemText, condition === item && styles.centeredModalItemTextSelected]}>
                     {item}
                   </Text>
                 </TouchableOpacity>
@@ -504,7 +418,6 @@ export default function CreateGRNScreen({ navigation, route }) {
         </View>
       </Modal>
 
-      {/* Unit Modal - Centered */}
       <Modal visible={showUnitModal} transparent animationType="fade">
         <View style={styles.centeredModalOverlay}>
           <View style={styles.centeredModalContent}>
@@ -519,22 +432,10 @@ export default function CreateGRNScreen({ navigation, route }) {
               keyExtractor={item => item}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={[
-                    styles.centeredModalItem,
-                    unit === item && styles.centeredModalItemSelected
-                  ]}
-                  onPress={() => {
-                    setUnit(item);
-                    setShowUnitModal(false);
-                    setErrors(e => ({ ...e, unit: '' }));
-                  }}
+                  style={[styles.centeredModalItem, unit === item && styles.centeredModalItemSelected]}
+                  onPress={() => { setUnit(item); setShowUnitModal(false); setErrors(e => ({ ...e, unit: '' })); }}
                 >
-                  <Text
-                    style={[
-                      styles.centeredModalItemText,
-                      unit === item && styles.centeredModalItemTextSelected
-                    ]}
-                  >
+                  <Text style={[styles.centeredModalItemText, unit === item && styles.centeredModalItemTextSelected]}>
                     {item}
                   </Text>
                 </TouchableOpacity>
@@ -549,176 +450,35 @@ export default function CreateGRNScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 16,
-    paddingVertical: 20
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#333'
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
-    color: '#333'
-  },
-  required: {
-    color: '#ff0000'
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 16,
-    backgroundColor: '#fff'
-  },
-  inputError: {
-    borderColor: '#ff0000'
-  },
-  selectButton: {
-    justifyContent: 'center'
-  },
-  notesInput: {
-    textAlignVertical: 'top',
-    paddingVertical: 12
-  },
-  errorText: {
-    color: '#ff0000',
-    fontSize: 12,
-    marginTop: 4
-  },
-  imageHint: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 10
-  },
-  imagePreviewContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginVertical: 12,
-    gap: 8
-  },
-  imagePreviewWrapper: {
-    position: 'relative',
-    width: '48%'
-  },
-  imagePreview: {
-    width: '100%',
-    height: 100,
-    borderRadius: 8,
-    backgroundColor: '#eee'
-  },
-  imageRemoveBtn: {
-    position: 'absolute',
-    top: -8,
-    right: -8,
-    backgroundColor: '#ff0000',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  imageRemoveBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold'
-  },
-  imageButtonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginVertical: 12
-  },
-  imageBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center'
-  },
-  imageBtnCamera: {
-    backgroundColor: '#6F3B18',
-    borderWidth: 1,
-    borderColor: '#553019'
-  },
-  imageBtnGallery: {
-    backgroundColor: '#85512C',
-    borderWidth: 1,
-    borderColor: '#6F3B18'
-  },
-  imageBtnText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14
-  },
-  submitBtn: {
-    backgroundColor: '#6F3B18',
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginTop: 24,
-    marginBottom: 30,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#553019'
-  },
-  submitBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold'
-  },
-  centeredModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center'
-  },
-  centeredModalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    width: '85%',
-    maxHeight: '70%',
-    paddingTop: 16
-  },
-  centeredModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee'
-  },
-  centeredModalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333'
-  },
-  centeredModalClose: {
-    fontSize: 24,
-    color: '#999'
-  },
-  centeredModalItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee'
-  },
-  centeredModalItemSelected: {
-    backgroundColor: '#E8D4C5'
-  },
-  centeredModalItemText: {
-    fontSize: 16,
-    color: '#333'
-  },
-  centeredModalItemTextSelected: {
-    fontWeight: 'bold',
-    color: '#6F3B18'
-  }
+  container: { flex: 1, backgroundColor: '#f5f5f5', paddingHorizontal: 16, paddingVertical: 20 },
+  sectionTitle: { fontSize: 22, fontWeight: 'bold', marginBottom: 20, color: '#333' },
+  label: { fontSize: 16, fontWeight: '600', marginTop: 16, marginBottom: 8, color: '#333' },
+  required: { color: '#ff0000' },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16, backgroundColor: '#fff' },
+  inputError: { borderColor: '#ff0000' },
+  selectButton: { justifyContent: 'center' },
+  notesInput: { textAlignVertical: 'top', paddingVertical: 12 },
+  errorText: { color: '#ff0000', fontSize: 12, marginTop: 4 },
+  imageHint: { fontSize: 12, color: '#999', marginBottom: 10 },
+  imagePreviewContainer: { flexDirection: 'row', flexWrap: 'wrap', marginVertical: 12, gap: 8 },
+  imagePreviewWrapper: { position: 'relative', width: '48%' },
+  imagePreview: { width: '100%', height: 100, borderRadius: 8, backgroundColor: '#eee' },
+  imageRemoveBtn: { position: 'absolute', top: -8, right: -8, backgroundColor: '#ff0000', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  imageRemoveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  imageButtonRow: { flexDirection: 'row', gap: 12, marginVertical: 12 },
+  imageBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
+  imageBtnCamera: { backgroundColor: '#6F3B18', borderWidth: 1, borderColor: '#553019' },
+  imageBtnGallery: { backgroundColor: '#85512C', borderWidth: 1, borderColor: '#6F3B18' },
+  imageBtnText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  submitBtn: { backgroundColor: '#6F3B18', paddingVertical: 14, borderRadius: 8, marginTop: 24, marginBottom: 30, alignItems: 'center', borderWidth: 1, borderColor: '#553019' },
+  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  centeredModalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'center', alignItems: 'center' },
+  centeredModalContent: { backgroundColor: '#fff', borderRadius: 16, width: '85%', maxHeight: '70%', paddingTop: 16 },
+  centeredModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  centeredModalTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
+  centeredModalClose: { fontSize: 24, color: '#999' },
+  centeredModalItem: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  centeredModalItemSelected: { backgroundColor: '#E8D4C5' },
+  centeredModalItemText: { fontSize: 16, color: '#333' },
+  centeredModalItemTextSelected: { fontWeight: 'bold', color: '#6F3B18' }
 });
