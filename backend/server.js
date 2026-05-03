@@ -36,5 +36,23 @@ app.use('/api/grns', grnRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/suppliers', supplierRoutes);
 
+// Health check — root route
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'SunriseSuper API is running 🚀',
+    version: '1.0.0',
+    endpoints: [
+      '/api/auth',
+      '/api/products',
+      '/api/inventory',
+      '/api/grns',
+      '/api/shifts',
+      '/api/suppliers',
+      '/api/complaints',
+    ]
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
