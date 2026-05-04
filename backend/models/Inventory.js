@@ -7,7 +7,7 @@ const inventorySchema = new mongoose.Schema({
   maxStock: { type: Number, required: true },
   expiryDate: { type: Date },
   lastRestockedDate: { type: Date, default: Date.now },
-  warehouseLocation: { type: String },
+  warehouseLocation: { type: String, required: true, trim: true },
   stockReport: { type: String }  // PDF report upload
 });
 

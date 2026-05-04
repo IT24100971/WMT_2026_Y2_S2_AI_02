@@ -18,11 +18,14 @@ const createInventory = async (req, res) => {
     try {
       const product = await Product.findById(req.body.productId);
       if (!product) return res.status(404).json({ message: 'Product not found' });
-      
-      const inventoryData = { ...req.body };
-      if (req.file) inventoryData.stockReport = req.file.path;
-      
-      const inventory = await Inventory.create(inventoryData);
+        const warehouseLocation = (req.body.warehouseLocation || '').toString().trim();
+        if (!warehouseLocation) return res.status(400).json({ message: 'Warehouse location is required' });
+
+        const inventoryData = { ...req.body };
+        inventoryData.warehouseLocation = warehouseLocation;
+        if (req.file) inventoryData.stockReport = req.file.path;
+
+        const inventory = await Inventory.create(inventoryData);
       res.status(201).json(inventory);
     } catch (error) {
       res.status(500).json({ message: error.message });
@@ -48,6 +51,29 @@ const getInventoryById = async (req, res) => {
     const inventory = await Inventory.findById(req.params.id).populate('productId');
     if (!inventory) return res.status(404).json({ message: 'Inventory not found' });
     res.json(inventory);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getWarehousesByProduct = async (req, res) => {
+  try {
+    const inventory = await Inventory.find({
+      productId: req.params.productId,
+      warehouseLocation: { $nin: [null, ''] }
+    }).select('warehouseLocation currentStock');
+
+    const warehouses = Array.from(
+      new Map(
+        inventory
+          .map(item => [item.warehouseLocation, {
+            warehouseLocation: item.warehouseLocation,
+            currentStock: item.currentStock
+          }])
+      ).values()
+    );
+
+    res.json({ success: true, data: warehouses });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -90,11 +116,12 @@ const updateInventory = async (req, res) => {
           if (!product) return res.status(404).json({ message: 'Product not found' });
           inventory.productId = req.body.productId;
         }
-
         if (req.body.currentStock !== undefined) inventory.currentStock = req.body.currentStock;
         if (req.body.reorderLevel !== undefined) inventory.reorderLevel = req.body.reorderLevel;
         if (req.body.maxStock !== undefined) inventory.maxStock = req.body.maxStock;
-        if (req.body.warehouseLocation !== undefined) inventory.warehouseLocation = req.body.warehouseLocation;
+        const warehouseLocation = (req.body.warehouseLocation || '').toString().trim();
+        if (!warehouseLocation) return res.status(400).json({ message: 'Warehouse location is required' });
+        inventory.warehouseLocation = warehouseLocation;
         if (req.body.expiryDate !== undefined) inventory.expiryDate = req.body.expiryDate;
 
         if (req.file) inventory.stockReport = req.file.path;
@@ -116,11 +143,12 @@ const updateInventory = async (req, res) => {
         if (!product) return res.status(404).json({ message: 'Product not found' });
         inventory.productId = req.body.productId;
       }
-
       if (req.body.currentStock !== undefined) inventory.currentStock = req.body.currentStock;
       if (req.body.reorderLevel !== undefined) inventory.reorderLevel = req.body.reorderLevel;
       if (req.body.maxStock !== undefined) inventory.maxStock = req.body.maxStock;
-      if (req.body.warehouseLocation !== undefined) inventory.warehouseLocation = req.body.warehouseLocation;
+      const warehouseLocation = (req.body.warehouseLocation || '').toString().trim();
+      if (!warehouseLocation) return res.status(400).json({ message: 'Warehouse location is required' });
+      inventory.warehouseLocation = warehouseLocation;
       if (req.body.expiryDate !== undefined) inventory.expiryDate = req.body.expiryDate;
 
       await inventory.save();
@@ -140,4 +168,4 @@ const deleteInventory = async (req, res) => {
   }
 };
 
-module.exports = { createInventory, getInventory, getInventoryById, updateStock, updateInventory, deleteInventory };
+module.exports = { createInventory, getInventory, getInventoryById, getWarehousesByProduct, updateStock, updateInventory, deleteInventory };

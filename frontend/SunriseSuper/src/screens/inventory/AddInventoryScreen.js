@@ -76,6 +76,7 @@ export default function AddInventoryScreen({ navigation }) {
     if (isNaN(reorderLevel) || Number(reorderLevel) < 0) return 'Reorder level must be non-negative';
     if (!maxStock) return 'Max stock is required';
     if (isNaN(maxStock) || Number(maxStock) < 0) return 'Max stock must be non-negative';
+    if (!warehouseLocation.trim()) return 'Warehouse location is required';
     if (Number(currentStock) > Number(maxStock)) return 'Current stock cannot exceed max stock';
     return null;
   };
@@ -94,7 +95,7 @@ export default function AddInventoryScreen({ navigation }) {
       formData.append('currentStock', String(Number(currentStock)));
       formData.append('reorderLevel', String(Number(reorderLevel)));
       formData.append('maxStock', String(Number(maxStock)));
-      if (warehouseLocation) formData.append('warehouseLocation', warehouseLocation);
+      formData.append('warehouseLocation', warehouseLocation.trim());
       if (expiryDate) formData.append('expiryDate', expiryDate);
       if (stockReport) {
         formData.append('stockReport', {
@@ -209,7 +210,7 @@ export default function AddInventoryScreen({ navigation }) {
       <TextInput style={styles.input} value={maxStock} onChangeText={setMaxStock}
         keyboardType="numeric" placeholder="Enter max stock quantity" placeholderTextColor="#bbb" />
 
-      <Text style={styles.label}>Warehouse Location</Text>
+      <Text style={styles.label}>Warehouse Location <Text style={styles.required}>*</Text></Text>
       <TextInput style={styles.input} value={warehouseLocation} onChangeText={setWarehouseLocation}
         placeholder="e.g. Aisle 3, Shelf B" placeholderTextColor="#bbb" />
 

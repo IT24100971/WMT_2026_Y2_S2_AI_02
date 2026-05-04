@@ -115,6 +115,21 @@ const updateMemberShiftResponse = async (req, res) => {
     shift.employeeStatus = employeeStatus;
     shift.employeeStatusReason = employeeStatus === 'Unable to Attend' ? employeeStatusReason : '';
     shift.employeeRespondedAt = new Date();
+    // If employee reports 'Unable to Attend' and the shift is for today, mark as Absent
+    if (employeeStatus === 'Unable to Attend') {
+      try {
+        const today = new Date();
+        const shiftDate = new Date(shift.date);
+        const sameDay = shiftDate.getFullYear() === today.getFullYear() &&
+                        shiftDate.getMonth() === today.getMonth() &&
+                        shiftDate.getDate() === today.getDate();
+        if (sameDay) {
+          shift.status = 'Absent';
+        }
+      } catch (err) {
+        console.error('Date comparison error:', err.message);
+      }
+    }
     await shift.save();
 
     const updatedShift = await Shift.findById(shift._id).populate('userId', 'fullName email role avatar');

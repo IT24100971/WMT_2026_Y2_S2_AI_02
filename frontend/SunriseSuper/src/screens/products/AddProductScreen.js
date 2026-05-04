@@ -103,13 +103,24 @@ export default function AddProductScreen({ navigation }) {
 
       await axios.post(`${BASE_URL}/products`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30000,
       });
 
       Alert.alert('Success! ✅', 'Product created successfully.', [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to create product. Please try again.';
+      let message = err.response?.data?.message || 'Failed to create product. Please try again.';
+      if (err.message?.includes('timeout')) {
+        message = 'Request timed out. Please check your internet connection and try again.';
+      }
+      if (err.code === 'ERR_NETWORK') {
+        message = 'Network error. Please check your internet connection.';
+      }
+      if (err.response?.status === 400 && image) {
+        message = 'Failed to upload image. Please try with a smaller image or try again.';
+      }
+      console.error('Product Submit Error:', err.response?.data || err.message);
       Alert.alert('Error', message);
     } finally {
       setLoading(false);

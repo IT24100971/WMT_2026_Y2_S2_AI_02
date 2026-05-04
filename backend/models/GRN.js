@@ -7,6 +7,7 @@ const grnSchema = new mongoose.Schema({
   invoicedQty: { type: Number, required: true },
   receivedQty: { type: Number, required: true },
   unit: { type: String, enum: ['kg', 'L', 'pcs'], required: true },
+  warehouseLocation: { type: String, required: true },
   condition: { type: String, enum: ['Good', 'Damaged', 'Rejected'], default: 'Good' },
   notes: { type: String, default: '' },
   receivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -16,7 +17,10 @@ const grnSchema = new mongoose.Schema({
   // Read/acknowledgement fields: Admin or Supervisor can mark a GRN as read
   isRead: { type: Boolean, default: false },
   readBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  readAt: { type: Date }
+  readAt: { type: Date },
+  inventoryApplied: { type: Boolean, default: false },
+  inventoryAppliedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  inventoryAppliedAt: { type: Date }
 });
 
 grnSchema.virtual('shipmentStatus').get(function() {

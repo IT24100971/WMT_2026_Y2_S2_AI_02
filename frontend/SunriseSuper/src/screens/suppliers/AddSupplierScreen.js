@@ -75,7 +75,14 @@ export default function AddSupplierScreen({ navigation }) {
   const validate = () => {
     const e = {};
     if (!supplierName.trim()) e.supplierName = 'Supplier name is required';
-    if (!contactNumber.trim()) e.contactNumber = 'Contact number is required';
+    if (!contactNumber.trim()) {
+      e.contactNumber = 'Contact number is required';
+    } else {
+      const phoneRegex = /^[+]?\d{10,}$/;
+      if (!phoneRegex.test(contactNumber.trim())) {
+        e.contactNumber = 'Phone must have at least 10 digits (e.g., 0771234567 or +94771234567)';
+      }
+    }
     if (!email.trim()) {
       e.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {

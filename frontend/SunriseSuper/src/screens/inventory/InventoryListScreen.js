@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, RefreshControl
+  TextInput, Alert, ActivityIndicator, RefreshControl, Modal
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL } from '../../context/AuthContext';
@@ -19,8 +19,30 @@ export default function InventoryListScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
 
   const statuses = ['All', 'In Stock', 'Low Stock', 'Out of Stock'];
+
+  const productOptions = inventory.reduce((options, item) => {
+    const product = item.productId;
+    if (product?._id && !options.some(option => option._id === product._id)) {
+      options.push(product);
+    }
+    return options;
+  }, []);
+
+  const warehouseOptions = inventory.reduce((options, item) => {
+    if (selectedProduct && item.productId?._id !== selectedProduct._id) {
+      return options;
+    }
+    if (item.warehouseLocation && !options.includes(item.warehouseLocation)) {
+      options.push(item.warehouseLocation);
+    }
+    return options;
+  }, []);
 
   const fetchInventory = async () => {
     try {
@@ -70,7 +92,9 @@ export default function InventoryListScreen({ navigation }) {
     const barcode = item.productId?.barcode?.toLowerCase() || '';
     const matchSearch = name.includes(search.toLowerCase()) || barcode.includes(search.toLowerCase());
     const matchStatus = filterStatus === 'All' || item.stockStatus === filterStatus;
-    return matchSearch && matchStatus;
+    const matchProduct = !selectedProduct || item.productId?._id === selectedProduct._id;
+    const matchWarehouse = !selectedWarehouse || item.warehouseLocation === selectedWarehouse;
+    return matchSearch && matchStatus && matchProduct && matchWarehouse;
   });
 
   const renderItem = ({ item }) => {
@@ -151,6 +175,29 @@ export default function InventoryListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      <View style={styles.topFilterRow}>
+        <TouchableOpacity style={styles.topFilterBtn} onPress={() => setShowProductModal(true)}>
+          <Text style={styles.topFilterLabel}>Product</Text>
+          <Text style={styles.topFilterValue}>{selectedProduct?.name || 'All Products'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.topFilterBtn} onPress={() => setShowWarehouseModal(true)}>
+          <Text style={styles.topFilterLabel}>Warehouse</Text>
+          <Text style={styles.topFilterValue}>{selectedWarehouse || 'All Warehouses'}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {(selectedProduct || selectedWarehouse) && (
+        <TouchableOpacity
+          style={styles.clearFilterBtn}
+          onPress={() => {
+            setSelectedProduct(null);
+            setSelectedWarehouse(null);
+          }}
+        >
+          <Text style={styles.clearFilterText}>Clear Product/Warehouse Filters</Text>
+        </TouchableOpacity>
+      )}
+
       <TextInput
         style={styles.searchInput}
         placeholder="🔍  Search by name or barcode..."
@@ -192,6 +239,88 @@ export default function InventoryListScreen({ navigation }) {
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
+
+      <Modal visible={showProductModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Product</Text>
+              <TouchableOpacity onPress={() => setShowProductModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={productOptions}
+              keyExtractor={item => item._id}
+              ListHeaderComponent={
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setSelectedProduct(null);
+                    setSelectedWarehouse(null);
+                    setShowProductModal(false);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>All Products</Text>
+                </TouchableOpacity>
+              }
+              ListEmptyComponent={<Text style={styles.modalEmpty}>No products found</Text>}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, selectedProduct?._id === item._id && styles.modalItemActive]}
+                  onPress={() => {
+                    setSelectedProduct(item);
+                    setSelectedWarehouse(null);
+                    setShowProductModal(false);
+                  }}
+                >
+                  <Text style={[styles.modalItemText, selectedProduct?._id === item._id && styles.modalItemTextActive]}>{item.name}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showWarehouseModal} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Warehouse</Text>
+              <TouchableOpacity onPress={() => setShowWarehouseModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={warehouseOptions}
+              keyExtractor={(item, index) => `${item}-${index}`}
+              ListHeaderComponent={
+                <TouchableOpacity
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setSelectedWarehouse(null);
+                    setShowWarehouseModal(false);
+                  }}
+                >
+                  <Text style={styles.modalItemText}>All Warehouses</Text>
+                </TouchableOpacity>
+              }
+              ListEmptyComponent={<Text style={styles.modalEmpty}>No warehouses found for this product</Text>}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.modalItem, selectedWarehouse === item && styles.modalItemActive]}
+                  onPress={() => {
+                    setSelectedWarehouse(item);
+                    setShowWarehouseModal(false);
+                  }}
+                >
+                  <Text style={[styles.modalItemText, selectedWarehouse === item && styles.modalItemTextActive]}>{item}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -199,6 +328,28 @@ export default function InventoryListScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f5', padding: 12 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  topFilterRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  topFilterBtn: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2
+  },
+  topFilterLabel: { fontSize: 11, color: '#8a8a8a', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.6 },
+  topFilterValue: { fontSize: 14, color: '#222', fontWeight: '600' },
+  clearFilterBtn: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#fff',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#d7d7d7'
+  },
+  clearFilterText: { fontSize: 12, color: '#666', fontWeight: '600' },
   searchInput: {
     backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 14,
     paddingVertical: 10, fontSize: 14, marginBottom: 10,
@@ -245,4 +396,14 @@ const styles = StyleSheet.create({
   },
   fabText: { color: '#fff', fontSize: 30, fontWeight: '300', lineHeight: 34 },
   empty: { textAlign: 'center', color: '#aaa', marginTop: 40, fontSize: 15 },
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', padding: 18 },
+  modalCard: { width: '100%', maxHeight: '72%', backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#ececec' },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: '#1a1a1a' },
+  modalClose: { fontSize: 22, color: '#888' },
+  modalItem: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' },
+  modalItemActive: { backgroundColor: '#eaf3ff' },
+  modalItemText: { fontSize: 15, color: '#333' },
+  modalItemTextActive: { color: '#1976d2', fontWeight: '700' },
+  modalEmpty: { padding: 16, textAlign: 'center', color: '#888' },
 });

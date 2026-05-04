@@ -1,23 +1,53 @@
 const Complaint = require('../models/Complaint');
 const multer = require('multer');
+const path = require('path');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('cloudinary').v2;
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+// Try to configure Cloudinary if credentials exist
+let storage;
+if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: 'sunrise-supermarket/complaints',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+  storage = new CloudinaryStorage({
+    cloudinary,
+    params: {
+      folder: 'sunrise-supermarket/complaints',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+    },
+  });
+} else {
+  // Fallback to local storage if Cloudinary credentials are not available
+  console.warn('⚠️  Cloudinary credentials not configured in complaint controller. Using local storage.');
+  storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, path.join(__dirname, '../uploads'));
+    },
+    filename: (req, file, cb) => {
+      const uniqueName = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, uniqueName + path.extname(file.originalname));
+    },
+  });
+}
+
+const uploadMiddleware = multer({ 
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
   },
-});
-
-const uploadMiddleware = multer({ storage }).single('evidenceImage');
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/jpg'];
+    if (!allowedMimes.includes(file.mimetype)) {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.'));
+    } else {
+      cb(null, true);
+    }
+  }
+}).single('evidenceImage');
 
 const toBoolean = (value) => {
   if (typeof value === 'boolean') return value;
@@ -31,7 +61,12 @@ const toBoolean = (value) => {
 
 const createComplaint = async (req, res) => {
   uploadMiddleware(req, res, async (err) => {
-    if (err) return res.status(400).json({ message: err.message });
+    if (err) {
+      console.error('Multer/Cloudinary Upload Error:', err);
+      return res.status(400).json({ 
+        message: `Image upload failed: ${err.message}. Please ensure the image is valid and try again.` 
+      });
+    }
 
     try {
       const complaintData = {

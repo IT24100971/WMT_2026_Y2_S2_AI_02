@@ -68,6 +68,7 @@ export default function EditStockScreen({ route, navigation }) {
       return 'Reorder level must be a non-negative number';
     if (!maxStock || isNaN(maxStock) || Number(maxStock) < 0)
       return 'Max stock must be a non-negative number';
+    if (!warehouseLocation.trim()) return 'Warehouse location is required';
     if (Number(currentStock) > Number(maxStock))
       return 'Current stock cannot exceed max stock';
     return null;
@@ -84,7 +85,7 @@ export default function EditStockScreen({ route, navigation }) {
       formData.append('currentStock', String(Number(currentStock)));
       formData.append('reorderLevel', String(Number(reorderLevel)));
       formData.append('maxStock', String(Number(maxStock)));
-      if (warehouseLocation) formData.append('warehouseLocation', warehouseLocation);
+      formData.append('warehouseLocation', warehouseLocation.trim());
       if (expiryDate) formData.append('expiryDate', expiryDate);
       if (stockReport) {
         formData.append('stockReport', {
@@ -169,7 +170,7 @@ export default function EditStockScreen({ route, navigation }) {
         placeholderTextColor="#bbb"
       />
 
-      <Text style={styles.label}>Warehouse Location</Text>
+      <Text style={styles.label}>Warehouse Location <Text style={styles.required}>*</Text></Text>
       <TextInput
         style={styles.input}
         value={warehouseLocation}

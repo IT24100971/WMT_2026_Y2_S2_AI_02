@@ -26,6 +26,12 @@ export default function AddShiftScreen({ navigation }) {
   const [endTime, setEndTime] = useState(new Date());
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [showStartTimeModal, setShowStartTimeModal] = useState(false);
+  const [showEndTimeModal, setShowEndTimeModal] = useState(false);
+  const [startTimeHours, setStartTimeHours] = useState('06');
+  const [startTimeMinutes, setStartTimeMinutes] = useState('00');
+  const [endTimeHours, setEndTimeHours] = useState('14');
+  const [endTimeMinutes, setEndTimeMinutes] = useState('00');
   const [status, setStatus] = useState('Scheduled');
   const [notes, setNotes] = useState('');
   const [attendanceReport, setAttendanceReport] = useState(null);
@@ -107,10 +113,88 @@ export default function AddShiftScreen({ navigation }) {
     return date.toTimeString().split(' ')[0].slice(0, 5);
   };
 
+  // Format time with AM/PM for display
+  const formatTimeDisplay = (date) => {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const ampm = date.getHours() >= 12 ? 'PM' : 'AM';
+    const displayHours = date.getHours() % 12 || 12;
+    return `${String(displayHours).padStart(2, '0')}:${minutes} ${ampm}`;
+  };
+
+  // Set times based on shift type
+  const setShiftTimes = (type) => {
+    const newStartTime = new Date();
+    const newEndTime = new Date();
+    
+    let startHours, startMins, endHours, endMins;
+    
+    switch(type) {
+      case 'Morning':
+        startHours = '06'; startMins = '00';
+        endHours = '14'; endMins = '00';
+        break;
+      case 'Evening':
+        startHours = '14'; startMins = '00';
+        endHours = '22'; endMins = '00';
+        break;
+      case 'Night':
+        startHours = '22'; startMins = '00';
+        endHours = '06'; endMins = '00';
+        break;
+      default:
+        return;
+    }
+    
+    newStartTime.setHours(Number(startHours), Number(startMins), 0);
+    newEndTime.setHours(Number(endHours), Number(endMins), 0);
+    
+    setStartTime(newStartTime);
+    setEndTime(newEndTime);
+    setStartTimeHours(startHours);
+    setStartTimeMinutes(startMins);
+    setEndTimeHours(endHours);
+    setEndTimeMinutes(endMins);
+  };
+
+  const applyStartTime = () => {
+    const hh = startTimeHours === '' ? '00' : String(startTimeHours).padStart(2, '0');
+    const mm = startTimeMinutes === '' ? '00' : String(startTimeMinutes).padStart(2, '0');
+    const newTime = new Date();
+    newTime.setHours(Number(hh), Number(mm), 0);
+    setStartTime(newTime);
+    setStartTimeHours(hh);
+    setStartTimeMinutes(mm);
+    setShowStartTimeModal(false);
+  };
+
+  const applyEndTime = () => {
+    const hh = endTimeHours === '' ? '00' : String(endTimeHours).padStart(2, '0');
+    const mm = endTimeMinutes === '' ? '00' : String(endTimeMinutes).padStart(2, '0');
+    const newTime = new Date();
+    newTime.setHours(Number(hh), Number(mm), 0);
+    setEndTime(newTime);
+    setEndTimeHours(hh);
+    setEndTimeMinutes(mm);
+    setShowEndTimeModal(false);
+  };
+
+  // Validate time range
+  const validateTimes = () => {
+    if (startTime >= endTime && !(shiftType === 'Night')) {
+      return 'Start time must be before end time';
+    }
+    return '';
+  };
+
   const validate = () => {
     const e = {};
     if (!selectedUserId) e.userId = 'Please select an employee';
     if (!shiftType) e.shiftType = 'Please select shift type';
+    
+    const timeError = validateTimes();
+    if (timeError) e.time = timeError;
+    
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -121,6 +205,59 @@ export default function AddShiftScreen({ navigation }) {
 
     try {
       const token = await AsyncStorage.getItem('token');
+      // Check for overlapping shifts for this user on the same date
+      try {
+        const resp = await axios.get(`${BASE_URL}/shifts`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { userId: selectedUserId, date: formatDate(date) }
+        });
+        const existing = resp.data || [];
+
+        const toMillis = (d) => d.getTime();
+        // normalize new shift times to the selected date
+        const newStart = new Date(date);
+        newStart.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
+        const newEnd = new Date(date);
+        newEnd.setHours(endTime.getHours(), endTime.getMinutes(), 0, 0);
+        if (newEnd <= newStart) {
+          // assume end is next day for overnight/night shifts
+          newEnd.setDate(newEnd.getDate() + 1);
+        }
+
+        const overlaps = existing.some(s => {
+          const sStartParts = s.startTime ? s.startTime.split(':') : ['0','0'];
+          const sEndParts = s.endTime ? s.endTime.split(':') : ['0','0'];
+          const sStart = new Date(date);
+          sStart.setHours(Number(sStartParts[0]), Number(sStartParts[1]), 0, 0);
+          const sEnd = new Date(date);
+          sEnd.setHours(Number(sEndParts[0]), Number(sEndParts[1]), 0, 0);
+          if (sEnd <= sStart) sEnd.setDate(sEnd.getDate() + 1);
+
+          return !(toMillis(newEnd) <= toMillis(sStart) || toMillis(newStart) >= toMillis(sEnd));
+        });
+
+        if (overlaps) {
+          Alert.alert('Conflict', 'Selected employee has another shift that overlaps on this date.');
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.log('Overlap check failed:', err?.response?.data || err.message);
+        // proceed — server may be down; but warn
+      }
+
+      // Prevent creating shifts in the past for same-day
+      const now = new Date();
+      const todayStr = formatDate(now);
+      if (formatDate(date) === todayStr) {
+        const startMillis = new Date(date);
+        startMillis.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
+        if (startMillis < now) {
+          Alert.alert('Invalid time', 'Start time cannot be in the past.');
+          setLoading(false);
+          return;
+        }
+      }
       
       const formData = new FormData();
       formData.append('userId', selectedUserId);
@@ -158,6 +295,65 @@ export default function AddShiftScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderTimeModal = (isStart) => {
+    const hours = isStart ? startTimeHours : endTimeHours;
+    const minutes = isStart ? startTimeMinutes : endTimeMinutes;
+    const setHours = isStart ? setStartTimeHours : setEndTimeHours;
+    const setMinutes = isStart ? setStartTimeMinutes : setEndTimeMinutes;
+    const onApply = isStart ? applyStartTime : applyEndTime;
+    const isVisible = isStart ? showStartTimeModal : showEndTimeModal;
+    const setVisible = isStart ? setShowStartTimeModal : setShowEndTimeModal;
+
+    return (
+      <Modal visible={isVisible} animationType="fade" transparent onRequestClose={() => setVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { width: '80%' }]}>
+            <Text style={styles.modalTitle}>{isStart ? 'Set Start Time' : 'Set End Time'}</Text>
+            
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginVertical: 20 }}>
+              <TextInput
+                style={[styles.timeInput]}
+                placeholder="HH"
+                value={hours}
+                onChangeText={(text) => {
+                  const num = text.replace(/[^0-9]/g, '');
+                  if (num === '' || (Number(num) >= 0 && Number(num) <= 23)) {
+                    setHours(num);
+                  }
+                }}
+                maxLength={2}
+                keyboardType="number-pad"
+              />
+              <Text style={{ fontSize: 24, marginHorizontal: 10 }}>:</Text>
+              <TextInput
+                style={[styles.timeInput]}
+                placeholder="MM"
+                value={minutes}
+                onChangeText={(text) => {
+                  const num = text.replace(/[^0-9]/g, '');
+                  if (num === '' || (Number(num) >= 0 && Number(num) <= 59)) {
+                    setMinutes(num);
+                  }
+                }}
+                maxLength={2}
+                keyboardType="number-pad"
+              />
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 10 }}>
+              <TouchableOpacity style={[styles.submitBtn, { flex: 0.4 }]} onPress={onApply}>
+                <Text style={styles.submitBtnText}>Apply</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.submitBtn, { flex: 0.4, backgroundColor: '#ccc' }]} onPress={() => setVisible(false)}>
+                <Text style={[styles.submitBtnText, { color: '#333' }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   const renderUserModal = () => (
@@ -236,6 +432,7 @@ export default function AddShiftScreen({ navigation }) {
           value={date}
           mode="date"
           display="default"
+          minimumDate={new Date()}
           onChange={(event, selectedDate) => {
             setShowDatePicker(false);
             if (selectedDate) setDate(selectedDate);
@@ -250,7 +447,11 @@ export default function AddShiftScreen({ navigation }) {
           <TouchableOpacity
             key={type}
             style={[styles.optionBtn, shiftType === type && styles.optionBtnActive]}
-            onPress={() => { setShiftType(type); setErrors(e => ({ ...e, shiftType: '' })); }}
+            onPress={() => { 
+              setShiftType(type);
+              setShiftTimes(type);
+              setErrors(e => ({ ...e, shiftType: '' })); 
+            }}
           >
             <Text style={[styles.optionBtnText, shiftType === type && styles.optionBtnTextActive]}>
               {type}
@@ -262,37 +463,27 @@ export default function AddShiftScreen({ navigation }) {
 
       {/* Start Time */}
       <Text style={styles.label}>Start Time <Text style={styles.required}>*</Text></Text>
-      <TouchableOpacity style={styles.pickerButton} onPress={() => setShowStartTimePicker(true)}>
-        <Text style={styles.pickerButtonText}>{formatTime(startTime)}</Text>
+      <TouchableOpacity style={styles.pickerButton} onPress={() => {
+        setStartTimeHours(String(startTime.getHours()).padStart(2, '0'));
+        setStartTimeMinutes(String(startTime.getMinutes()).padStart(2, '0'));
+        setShowStartTimeModal(true);
+      }}>
+        <Text style={styles.pickerButtonText}>{formatTimeDisplay(startTime)}</Text>
       </TouchableOpacity>
-      {showStartTimePicker && (
-        <DateTimePicker
-          value={startTime}
-          mode="time"
-          display="default"
-          onChange={(event, selectedTime) => {
-            setShowStartTimePicker(false);
-            if (selectedTime) setStartTime(selectedTime);
-          }}
-        />
-      )}
 
       {/* End Time */}
       <Text style={styles.label}>End Time <Text style={styles.required}>*</Text></Text>
-      <TouchableOpacity style={styles.pickerButton} onPress={() => setShowEndTimePicker(true)}>
-        <Text style={styles.pickerButtonText}>{formatTime(endTime)}</Text>
+      <TouchableOpacity style={styles.pickerButton} onPress={() => {
+        setEndTimeHours(String(endTime.getHours()).padStart(2, '0'));
+        setEndTimeMinutes(String(endTime.getMinutes()).padStart(2, '0'));
+        setShowEndTimeModal(true);
+      }}>
+        <Text style={styles.pickerButtonText}>{formatTimeDisplay(endTime)}</Text>
       </TouchableOpacity>
-      {showEndTimePicker && (
-        <DateTimePicker
-          value={endTime}
-          mode="time"
-          display="default"
-          onChange={(event, selectedTime) => {
-            setShowEndTimePicker(false);
-            if (selectedTime) setEndTime(selectedTime);
-          }}
-        />
-      )}
+      {errors.time && <Text style={styles.errorText}>{errors.time}</Text>}
+
+      {renderTimeModal(true)}
+      {renderTimeModal(false)}
 
       {/* Status */}
       <Text style={styles.label}>Status</Text>
@@ -425,4 +616,9 @@ const styles = StyleSheet.create({
   },
   closeModalText: { color: '#fff', fontWeight: 'bold' },
   emptyText: { textAlign: 'center', color: '#999', padding: 20 },
+  timeInput: {
+    borderWidth: 1, borderColor: '#ddd', borderRadius: 8,
+    padding: 12, width: 60, textAlign: 'center', fontSize: 20,
+    fontWeight: 'bold', backgroundColor: '#f5f5f5',
+  },
 });

@@ -43,12 +43,22 @@ const AddComplaintScreen = ({ navigation }) => {
         const fileType = name.split('.').pop();
         formData.append('evidenceImage', { uri: image, name: name, type: `image/${fileType === 'jpg' ? 'jpeg' : fileType}` });
       }
-      const response = await axios.post(`${BASE_URL}/complaints`, formData, { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` } });
+      const response = await axios.post(`${BASE_URL}/complaints`, formData, { headers: { 'Content-Type': 'multipart/form-data', Authorization: `Bearer ${token}` }, timeout: 30000 });
       Alert.alert('Success', 'Complaint submitted successfully');
       navigation.replace('ViewComplaint', { complaint: response.data });
     } catch (err) {
-      console.error(err);
-      Alert.alert('Error', err.response?.data?.message || 'Submission failed');
+      let message = err.response?.data?.message || 'Submission failed';
+      if (err.message?.includes('timeout')) {
+        message = 'Request timed out. Please check your internet connection and try again.';
+      }
+      if (err.code === 'ERR_NETWORK') {
+        message = 'Network error. Please check your internet connection.';
+      }
+      if (err.response?.status === 400 && image) {
+        message = 'Failed to upload image. Please try with a smaller image or try again.';
+      }
+      console.error('Complaint Submit Error:', err.response?.data || err.message);
+      Alert.alert('Error', message);
     } finally { setLoading(false); }
   };
 

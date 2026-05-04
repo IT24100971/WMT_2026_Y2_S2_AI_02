@@ -3,7 +3,12 @@ const upload = require('../middleware/upload');
 
 const createProduct = (req, res) => {
   upload.single('image')(req, res, async (err) => {
-    if (err) return res.status(400).json({ message: err.message });
+    if (err) {
+      console.error('Multer/Upload Error:', err);
+      return res.status(400).json({ 
+        message: `Image upload failed: ${err.message}. Please ensure the image is valid and try again.` 
+      });
+    }
 
     try {
       const { name, category, barcode, unit, sellingPrice, costPrice, description } = req.body;
@@ -62,7 +67,12 @@ const getSingleProduct = async (req, res) => {
 
 const updateProduct = (req, res) => {
   upload.single('image')(req, res, async (err) => {
-    if (err) return res.status(400).json({ message: err.message });
+    if (err) {
+      console.error('Multer/Upload Error:', err);
+      return res.status(400).json({ 
+        message: `Image upload failed: ${err.message}. Please ensure the image is valid and try again.` 
+      });
+    }
 
     try {
       const updateData = { ...req.body };

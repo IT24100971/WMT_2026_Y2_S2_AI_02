@@ -21,6 +21,9 @@ export default function GRNListScreen({ navigation }) {
   const { user } = useAuth();
   const [grns, setGrns] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [applyingId, setApplyingId] = useState(null);
+  const [showInventoryActionModal, setShowInventoryActionModal] = useState(false);
+  const [selectedInventoryGRN, setSelectedInventoryGRN] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [conditionFilter, setConditionFilter] = useState('All');
@@ -88,21 +91,53 @@ export default function GRNListScreen({ navigation }) {
     }
   };
 
-  const markRead = async (id) => {
+  const markRead = async (item) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await axios.put(`${BASE_URL}/grn/${id}/mark-read`, {}, {
+      const res = await axios.put(`${BASE_URL}/grn/${item._id}/mark-read`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         timeout: 20000
       });
       if (res.data.success) {
-        Alert.alert('Updated', 'GRN marked as read');
+        setSelectedInventoryGRN(item);
+        setShowInventoryActionModal(true);
         fetchGRNs();
       }
     } catch (err) {
       console.log(err);
       Alert.alert('Error', err.response?.data?.message || 'Failed to mark as read');
     }
+  };
+
+  const addToInventory = async (id) => {
+    try {
+      setApplyingId(id);
+      const token = await AsyncStorage.getItem('token');
+      const res = await axios.post(`${BASE_URL}/grn/${id}/apply-to-inventory`, {}, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        timeout: 20000
+      });
+      if (res.data.success) {
+        Alert.alert('Updated', 'Inventory updated successfully');
+        fetchGRNs();
+      }
+    } catch (err) {
+      console.log(err);
+      Alert.alert('Error', err.response?.data?.message || 'Failed to update inventory');
+    } finally {
+      setApplyingId(null);
+    }
+  };
+
+  const closeInventoryActions = () => {
+    setShowInventoryActionModal(false);
+    setSelectedInventoryGRN(null);
+  };
+
+  const openApplyInventory = async (item) => {
+    setShowInventoryActionModal(false);
+    setSelectedInventoryGRN(null);
+    await addToInventory(item._id);
   };
 
   const deleteGRN = async (id) => {
@@ -248,6 +283,7 @@ export default function GRNListScreen({ navigation }) {
       <View style={styles.detailsSection}>
         <Text style={styles.detail}>📦 <Text style={styles.detailBold}>{item.productId?.name}</Text></Text>
         <Text style={styles.detail}>🏢 <Text style={styles.detailBold}>{item.supplierId?.supplierName}</Text></Text>
+        <Text style={styles.detail}>🏬 Warehouse: <Text style={styles.detailBold}>{item.warehouseLocation || 'N/A'}</Text></Text>
         <View style={styles.quantityRow}>
           <Text style={styles.detail}>📥 Received: {item.receivedQty}</Text>
           <Text style={styles.detail}> / 📋 Invoiced: {item.invoicedQty}</Text>
@@ -264,11 +300,29 @@ export default function GRNListScreen({ navigation }) {
             ✓ Confirmed by {item.readBy?.fullName || item.readBy?.email || 'Unknown'} on {item.readAt ? new Date(item.readAt).toLocaleString() : '—'}
           </Text>
         )}
+        {item.inventoryApplied && (
+          <Text style={styles.readByText}>
+            ✓ Added to inventory by {item.inventoryAppliedBy?.fullName || item.inventoryAppliedBy?.email || 'Unknown'} on {item.inventoryAppliedAt ? new Date(item.inventoryAppliedAt).toLocaleString() : '—'}
+          </Text>
+        )}
       </View>
 
       {!item.isRead && (user?.role === 'Admin' || user?.role === 'Supervisor') && (
-        <TouchableOpacity style={styles.markReadBtn} onPress={() => markRead(item._id)}>
+        <TouchableOpacity style={styles.markReadBtn} onPress={() => markRead(item)}>
           <Text style={styles.markReadBtnText}>Mark as Read</Text>
+        </TouchableOpacity>
+      )}
+
+      {item.isRead && !item.inventoryApplied && (user?.role === 'Admin' || user?.role === 'Supervisor') && (
+        <TouchableOpacity
+          style={[styles.applyBtn, applyingId === item._id && { opacity: 0.6 }]}
+          onPress={() => {
+            setSelectedInventoryGRN(item);
+            setShowInventoryActionModal(true);
+          }}
+          disabled={applyingId === item._id}
+        >
+          <Text style={styles.applyBtnText}>{applyingId === item._id ? 'Adding...' : 'Inventory Actions'}</Text>
         </TouchableOpacity>
       )}
 
@@ -460,6 +514,48 @@ export default function GRNListScreen({ navigation }) {
         </View>
       </Modal>
 
+      <Modal visible={showInventoryActionModal} transparent animationType="fade" onRequestClose={() => setShowInventoryActionModal(false)}>
+        <View style={styles.centeredModalOverlay}>
+          <View style={styles.centeredModalContent}>
+            <View style={styles.centeredModalHeader}>
+              <Text style={styles.centeredModalTitle}>Inventory Actions</Text>
+              <TouchableOpacity onPress={() => setShowInventoryActionModal(false)}>
+                <Text style={styles.centeredModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 }}>
+              <Text style={{ fontSize: 14, color: '#444', lineHeight: 20 }}>
+                If damaged or rejected items were received, a manual inventory review should be done before adding to inventory.
+              </Text>
+            </View>
+
+            <View style={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+              <TouchableOpacity
+                style={[styles.inventoryModalBtn, styles.inventoryModalPrimary]}
+                onPress={() => selectedInventoryGRN && openApplyInventory(selectedInventoryGRN)}
+              >
+                <Text style={styles.inventoryModalBtnText}>Add to Inventory</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.inventoryModalBtn, styles.inventoryModalManual]}
+                onPress={closeInventoryActions}
+              >
+                <Text style={styles.inventoryModalBtnText}>Manual Inventory Review / Close</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.inventoryModalBtn, styles.inventoryModalCancel]}
+                onPress={() => setShowInventoryActionModal(false)}
+              >
+                <Text style={[styles.inventoryModalBtnText, { color: '#333' }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {renderImageViewer()}
     </View>
   );
@@ -503,6 +599,8 @@ const styles = StyleSheet.create({
   readByText: { fontSize: 12, color: '#5D3317', fontWeight: '500', marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
   markReadBtn: { backgroundColor: '#8B4513', marginHorizontal: 14, marginBottom: 12, paddingVertical: 10, borderRadius: 6, borderWidth: 1, borderColor: '#654321' },
   markReadBtnText: { color: '#fff', textAlign: 'center', fontWeight: '600' },
+  applyBtn: { backgroundColor: '#1976d2', marginHorizontal: 14, marginBottom: 12, paddingVertical: 10, borderRadius: 6, borderWidth: 1, borderColor: '#145ea8' },
+  applyBtnText: { color: '#fff', textAlign: 'center', fontWeight: '600' },
   actionRow: { flexDirection: 'row', gap: 10, marginHorizontal: 14, marginBottom: 12 },
   editBtn: { flex: 1, backgroundColor: '#A66A3F', paddingVertical: 10, borderRadius: 6, borderWidth: 1, borderColor: '#7A4A29' },
   deleteBtn: { flex: 1, backgroundColor: '#6D2F1A', paddingVertical: 10, borderRadius: 6, borderWidth: 1, borderColor: '#532114' },
@@ -520,6 +618,11 @@ const styles = StyleSheet.create({
   modalBtn: { flex: 1, paddingVertical: 12, borderRadius: 8, alignItems: 'center' },
   modalCancelBtn: { backgroundColor: '#f0f0f0' },
   modalBtnText: { fontSize: 14, fontWeight: '600', color: '#333' },
+  inventoryModalBtn: { paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 10, borderWidth: 1 },
+  inventoryModalPrimary: { backgroundColor: '#1976d2', borderColor: '#145ea8' },
+  inventoryModalManual: { backgroundColor: '#ff9800', borderColor: '#d57f00' },
+  inventoryModalCancel: { backgroundColor: '#f0f0f0', borderColor: '#ddd' },
+  inventoryModalBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
   dateLabel: { fontSize: 13, color: '#666', fontWeight: '600', marginBottom: 8 },
   centeredModalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.6)', justifyContent: 'center', alignItems: 'center' },
   centeredModalContent: { backgroundColor: '#fff', borderRadius: 16, width: '85%', maxHeight: '80%', paddingTop: 16 },

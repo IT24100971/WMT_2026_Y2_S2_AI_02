@@ -1,7 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, Alert, ActivityIndicator, Modal, FlatList, Image
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Modal,
+  FlatList,
+  Image
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,7 +18,6 @@ import axios from 'axios';
 import { BASE_URL } from '../../context/AuthContext';
 
 const CONDITIONS = ['Good', 'Damaged', 'Rejected'];
-const UNITS = ['kg', 'L', 'pcs'];
 const MAX_IMAGES = 4;
 const SERVER_URL = BASE_URL.replace('/api', '');
 
@@ -25,26 +33,62 @@ const getImageUri = (img) => {
 export default function CreateGRNScreen({ navigation, route }) {
   const editGRN = route?.params?.grn;
   const isEditMode = !!editGRN;
+
   const [supplierId, setSupplierId] = useState('');
   const [productId, setProductId] = useState('');
   const [invoicedQty, setInvoicedQty] = useState('');
   const [receivedQty, setReceivedQty] = useState('');
   const [condition, setCondition] = useState('Good');
   const [unit, setUnit] = useState('');
+  const [warehouseLocation, setWarehouseLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [images, setImages] = useState([]);
 
   const [allSuppliers, setAllSuppliers] = useState([]);
   const [allProducts, setAllProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
+  const [warehouseOptions, setWarehouseOptions] = useState([]);
 
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showConditionModal, setShowConditionModal] = useState(false);
-  const [showUnitModal, setShowUnitModal] = useState(false);
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const loadWarehousesForProduct = async (selectedProductId, preferredWarehouse = '') => {
+    if (!selectedProductId) {
+      setWarehouseOptions([]);
+      setWarehouseLocation('');
+      return;
+    }
+
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await axios.get(`${BASE_URL}/inventory/product/${selectedProductId}/warehouses`, {
+        headers,
+        timeout: 20000
+      });
+
+      const warehouses = Array.isArray(res.data?.data) ? res.data.data : [];
+      const locations = warehouses.map(item => item.warehouseLocation).filter(Boolean);
+      setWarehouseOptions(locations);
+
+      if (preferredWarehouse && locations.includes(preferredWarehouse)) {
+        setWarehouseLocation(preferredWarehouse);
+      } else if (locations.length === 1) {
+        setWarehouseLocation(locations[0]);
+      } else {
+        setWarehouseLocation('');
+      }
+    } catch (err) {
+      console.log('Failed to load warehouses:', err);
+      setWarehouseOptions([]);
+      setWarehouseLocation('');
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -61,7 +105,8 @@ export default function CreateGRNScreen({ navigation, route }) {
     setInvoicedQty(String(editGRN.invoicedQty ?? ''));
     setReceivedQty(String(editGRN.receivedQty ?? ''));
     setCondition(editGRN.condition || 'Good');
-    setUnit(editGRN.unit || '');
+    setUnit(editGRN.productId?.unit || editGRN.unit || '');
+    setWarehouseLocation(editGRN.warehouseLocation || '');
     setNotes(editGRN.notes || '');
 
     const existingImages = Array.isArray(editGRN.images) && editGRN.images.length > 0
@@ -80,6 +125,8 @@ export default function CreateGRNScreen({ navigation, route }) {
     } else {
       setFilteredProducts(allProducts);
     }
+
+    loadWarehousesForProduct(resolvedProductId, editGRN.warehouseLocation || '');
   }, [editGRN, allSuppliers, allProducts]);
 
   const fetchData = async () => {
@@ -90,10 +137,12 @@ export default function CreateGRNScreen({ navigation, route }) {
         axios.get(`${BASE_URL}/suppliers`, { headers, timeout: 20000 }),
         axios.get(`${BASE_URL}/products`, { headers, timeout: 20000 })
       ]);
-      setAllSuppliers(suppRes.data || []);
-      const products = prodRes.data.data || prodRes.data || [];
-      setAllProducts(Array.isArray(products) ? products : []);
-      setFilteredProducts(Array.isArray(products) ? products : []);
+
+      const suppliers = Array.isArray(suppRes.data) ? suppRes.data : (suppRes.data?.data || []);
+      const products = Array.isArray(prodRes.data) ? prodRes.data : (prodRes.data?.data || []);
+      setAllSuppliers(suppliers);
+      setAllProducts(products);
+      setFilteredProducts(products);
     } catch (err) {
       console.log('Error fetching data:', err);
       Alert.alert('Error', 'Failed to load suppliers and products');
@@ -150,7 +199,7 @@ export default function CreateGRNScreen({ navigation, route }) {
     } else if (isNaN(Number(receivedQty)) || Number(receivedQty) < 0) {
       e.receivedQty = 'Must be a positive number';
     }
-    if (!unit) e.unit = 'Unit is required';
+    if (!warehouseLocation) e.warehouseLocation = 'Warehouse is required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -168,6 +217,7 @@ export default function CreateGRNScreen({ navigation, route }) {
       formData.append('receivedQty', receivedQty);
       formData.append('condition', condition);
       formData.append('unit', unit);
+      formData.append('warehouseLocation', warehouseLocation);
       formData.append('notes', notes);
 
       const existingImages = images.filter(img => typeof img === 'string');
@@ -196,11 +246,46 @@ export default function CreateGRNScreen({ navigation, route }) {
         ]);
       }
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to create GRN. Please try again.';
+      let message = err.response?.data?.message || 'Failed to create GRN. Please try again.';
+      if (err.message?.includes('timeout')) {
+        message = 'Request timed out. Please check your internet connection and try again.';
+      }
+      if (err.code === 'ERR_NETWORK') {
+        message = 'Network error. Please check your internet connection.';
+      }
+      console.error('GRN Submit Error:', err.response?.data || err.message);
       Alert.alert('Error', message);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSupplierSelect = (supplier) => {
+    setSupplierId(supplier._id);
+    const selectedSupplier = allSuppliers.find(s => s._id === supplier._id);
+    if (selectedSupplier && selectedSupplier.productsSupplied && selectedSupplier.productsSupplied.length > 0) {
+      const filtered = allProducts.filter(p =>
+        selectedSupplier.productsSupplied.some(name => name.toLowerCase().trim() === p.name.toLowerCase().trim())
+      );
+      setFilteredProducts(filtered.length > 0 ? filtered : allProducts);
+    } else {
+      setFilteredProducts(allProducts);
+    }
+    setProductId('');
+    setUnit('');
+    setWarehouseLocation('');
+    setWarehouseOptions([]);
+    setShowSupplierModal(false);
+    setErrors(e => ({ ...e, supplierId: '' }));
+  };
+
+  const handleProductSelect = async (product) => {
+    setProductId(product._id);
+    setUnit(product.unit || '');
+    setWarehouseLocation('');
+    setShowProductModal(false);
+    setErrors(e => ({ ...e, productId: '' }));
+    await loadWarehousesForProduct(product._id);
   };
 
   return (
@@ -230,6 +315,25 @@ export default function CreateGRNScreen({ navigation, route }) {
       </TouchableOpacity>
       {errors.productId && <Text style={styles.errorText}>{errors.productId}</Text>}
 
+      <Text style={styles.label}>Unit</Text>
+      <View style={[styles.input, styles.readOnlyField]}>
+        <Text style={{ color: unit ? '#333' : '#999' }}>
+          {unit || 'Auto from selected product'}
+        </Text>
+      </View>
+
+      <Text style={styles.label}>Warehouse <Text style={styles.required}>*</Text></Text>
+      <TouchableOpacity
+        style={[styles.input, styles.selectButton, errors.warehouseLocation && styles.inputError, !productId && { opacity: 0.5 }]}
+        onPress={() => productId && setShowWarehouseModal(true)}
+        disabled={!productId}
+      >
+        <Text style={{ color: warehouseLocation ? '#333' : '#999' }}>
+          {warehouseLocation || (productId ? 'Select Warehouse' : 'Select Product First')}
+        </Text>
+      </TouchableOpacity>
+      {errors.warehouseLocation && <Text style={styles.errorText}>{errors.warehouseLocation}</Text>}
+
       <Text style={styles.label}>Invoiced Quantity <Text style={styles.required}>*</Text></Text>
       <TextInput
         style={[styles.input, errors.invoicedQty && styles.inputError]}
@@ -249,15 +353,6 @@ export default function CreateGRNScreen({ navigation, route }) {
         onChangeText={text => { setReceivedQty(text); setErrors(e => ({ ...e, receivedQty: '' })); }}
       />
       {errors.receivedQty && <Text style={styles.errorText}>{errors.receivedQty}</Text>}
-
-      <Text style={styles.label}>Unit <Text style={styles.required}>*</Text></Text>
-      <TouchableOpacity
-        style={[styles.input, styles.selectButton, errors.unit && styles.inputError]}
-        onPress={() => setShowUnitModal(true)}
-      >
-        <Text style={{ color: unit ? '#333' : '#999' }}>{unit || 'Select Unit'}</Text>
-      </TouchableOpacity>
-      {errors.unit && <Text style={styles.errorText}>{errors.unit}</Text>}
 
       <Text style={styles.label}>Condition <Text style={styles.required}>*</Text></Text>
       <TouchableOpacity
@@ -327,21 +422,7 @@ export default function CreateGRNScreen({ navigation, route }) {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.centeredModalItem, supplierId === item._id && styles.centeredModalItemSelected]}
-                  onPress={() => {
-                    setSupplierId(item._id);
-                    const supplier = allSuppliers.find(s => s._id === item._id);
-                    if (supplier && supplier.productsSupplied && supplier.productsSupplied.length > 0) {
-                      const filtered = allProducts.filter(p =>
-                        supplier.productsSupplied.some(name => name.toLowerCase().trim() === p.name.toLowerCase().trim())
-                      );
-                      setFilteredProducts(filtered.length > 0 ? filtered : allProducts);
-                    } else {
-                      setFilteredProducts(allProducts);
-                    }
-                    setProductId('');
-                    setShowSupplierModal(false);
-                    setErrors(e => ({ ...e, supplierId: '' }));
-                  }}
+                  onPress={() => handleSupplierSelect(item)}
                 >
                   <Text style={[styles.centeredModalItemText, supplierId === item._id && styles.centeredModalItemTextSelected]}>
                     {item.supplierName}
@@ -350,7 +431,6 @@ export default function CreateGRNScreen({ navigation, route }) {
               )}
               scrollEnabled={true}
               nestedScrollEnabled={true}
-              maxHeight={300}
             />
           </View>
         </View>
@@ -371,11 +451,7 @@ export default function CreateGRNScreen({ navigation, route }) {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.centeredModalItem, productId === item._id && styles.centeredModalItemSelected]}
-                  onPress={() => {
-                    setProductId(item._id);
-                    setShowProductModal(false);
-                    setErrors(e => ({ ...e, productId: '' }));
-                  }}
+                  onPress={() => handleProductSelect(item)}
                 >
                   <Text style={[styles.centeredModalItemText, productId === item._id && styles.centeredModalItemTextSelected]}>
                     {item.name}
@@ -384,7 +460,40 @@ export default function CreateGRNScreen({ navigation, route }) {
               )}
               scrollEnabled={true}
               nestedScrollEnabled={true}
-              maxHeight={300}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showWarehouseModal} transparent animationType="fade">
+        <View style={styles.centeredModalOverlay}>
+          <View style={styles.centeredModalContent}>
+            <View style={styles.centeredModalHeader}>
+              <Text style={styles.centeredModalTitle}>Select Warehouse</Text>
+              <TouchableOpacity onPress={() => setShowWarehouseModal(false)}>
+                <Text style={styles.centeredModalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={warehouseOptions}
+              keyExtractor={(item, index) => `${item}-${index}`}
+              ListEmptyComponent={<Text style={styles.emptyStateText}>No warehouses available for this product</Text>}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.centeredModalItem, warehouseLocation === item && styles.centeredModalItemSelected]}
+                  onPress={() => {
+                    setWarehouseLocation(item);
+                    setShowWarehouseModal(false);
+                    setErrors(e => ({ ...e, warehouseLocation: '' }));
+                  }}
+                >
+                  <Text style={[styles.centeredModalItemText, warehouseLocation === item && styles.centeredModalItemTextSelected]}>
+                    {item}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              scrollEnabled={true}
+              nestedScrollEnabled={true}
             />
           </View>
         </View>
@@ -405,37 +514,12 @@ export default function CreateGRNScreen({ navigation, route }) {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.centeredModalItem, condition === item && styles.centeredModalItemSelected]}
-                  onPress={() => { setCondition(item); setShowConditionModal(false); }}
+                  onPress={() => {
+                    setCondition(item);
+                    setShowConditionModal(false);
+                  }}
                 >
                   <Text style={[styles.centeredModalItemText, condition === item && styles.centeredModalItemTextSelected]}>
-                    {item}
-                  </Text>
-                </TouchableOpacity>
-              )}
-              scrollEnabled={false}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showUnitModal} transparent animationType="fade">
-        <View style={styles.centeredModalOverlay}>
-          <View style={styles.centeredModalContent}>
-            <View style={styles.centeredModalHeader}>
-              <Text style={styles.centeredModalTitle}>Select Unit</Text>
-              <TouchableOpacity onPress={() => setShowUnitModal(false)}>
-                <Text style={styles.centeredModalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={UNITS}
-              keyExtractor={item => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.centeredModalItem, unit === item && styles.centeredModalItemSelected]}
-                  onPress={() => { setUnit(item); setShowUnitModal(false); setErrors(e => ({ ...e, unit: '' })); }}
-                >
-                  <Text style={[styles.centeredModalItemText, unit === item && styles.centeredModalItemTextSelected]}>
                     {item}
                   </Text>
                 </TouchableOpacity>
@@ -457,6 +541,7 @@ const styles = StyleSheet.create({
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 12, fontSize: 16, backgroundColor: '#fff' },
   inputError: { borderColor: '#ff0000' },
   selectButton: { justifyContent: 'center' },
+  readOnlyField: { backgroundColor: '#f7f7f7' },
   notesInput: { textAlignVertical: 'top', paddingVertical: 12 },
   errorText: { color: '#ff0000', fontSize: 12, marginTop: 4 },
   imageHint: { fontSize: 12, color: '#999', marginBottom: 10 },
@@ -480,5 +565,6 @@ const styles = StyleSheet.create({
   centeredModalItem: { paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#eee' },
   centeredModalItemSelected: { backgroundColor: '#E8D4C5' },
   centeredModalItemText: { fontSize: 16, color: '#333' },
-  centeredModalItemTextSelected: { fontWeight: 'bold', color: '#6F3B18' }
+  centeredModalItemTextSelected: { fontWeight: 'bold', color: '#6F3B18' },
+  emptyStateText: { textAlign: 'center', color: '#777', paddingVertical: 16 }
 });
