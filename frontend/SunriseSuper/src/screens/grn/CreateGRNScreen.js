@@ -237,8 +237,8 @@ export default function CreateGRNScreen({ navigation, route }) {
         ...(token ? { Authorization: `Bearer ${token}` } : {})
       };
       const res = isEditMode
-        ? await axios.put(`${BASE_URL}/grn/${editGRN._id}`, formData, { headers, timeout: 20000 })
-        : await axios.post(`${BASE_URL}/grn`, formData, { headers, timeout: 20000 });
+        ? await axios.put(`${BASE_URL}/grns/${editGRN._id}`, formData, { headers, timeout: 20000 })
+        : await axios.post(`${BASE_URL}/grns`, formData, { headers, timeout: 20000 });
 
       if (res.data.success) {
         Alert.alert('Success! ✅', isEditMode ? 'GRN updated successfully.' : 'GRN created successfully.', [

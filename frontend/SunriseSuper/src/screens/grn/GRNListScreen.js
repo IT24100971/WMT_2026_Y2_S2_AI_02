@@ -52,7 +52,7 @@ export default function GRNListScreen({ navigation }) {
     setLoading(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await axios.get(`${BASE_URL}/grn`, {
+      const res = await axios.get(`${BASE_URL}/grns`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         timeout: 20000
       });
@@ -94,7 +94,7 @@ export default function GRNListScreen({ navigation }) {
   const markRead = async (item) => {
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await axios.put(`${BASE_URL}/grn/${item._id}/mark-read`, {}, {
+      const res = await axios.put(`${BASE_URL}/grns/${item._id}/mark-read`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         timeout: 20000
       });
@@ -113,7 +113,7 @@ export default function GRNListScreen({ navigation }) {
     try {
       setApplyingId(id);
       const token = await AsyncStorage.getItem('token');
-      const res = await axios.post(`${BASE_URL}/grn/${id}/apply-to-inventory`, {}, {
+      const res = await axios.post(`${BASE_URL}/grns/${id}/apply-to-inventory`, {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         timeout: 20000
       });
@@ -149,7 +149,7 @@ export default function GRNListScreen({ navigation }) {
         onPress: async () => {
           try {
             const token = await AsyncStorage.getItem('token');
-            const res = await axios.delete(`${BASE_URL}/grn/${id}`, {
+            const res = await axios.delete(`${BASE_URL}/grns/${id}`, {
               headers: token ? { Authorization: `Bearer ${token}` } : {},
               timeout: 20000
             });

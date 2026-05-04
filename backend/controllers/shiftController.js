@@ -1,15 +1,24 @@
 const Shift = require('../models/Shift');
 const User = require('../models/User');
 const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 const path = require('path');
 const fs = require('fs');
 
 const MANAGER_ROLES = ['Admin', 'Supervisor'];
 
-const storage = multer.diskStorage({
-  destination: './uploads/shifts/',
-  filename: (req, file, cb) => {
-    cb(null, 'attendance-' + Date.now() + path.extname(file.originalname));
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'wmt_shifts',
+    resource_type: 'auto'
   }
 });
 const allowedMimeTypes = [

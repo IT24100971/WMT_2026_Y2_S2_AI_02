@@ -139,8 +139,12 @@ export default function InventoryListScreen({ navigation }) {
           <TouchableOpacity
             style={styles.reportBtn}
             onPress={() => {
-              const url = `${BASE_URL.replace('/api', '')}/${item.stockReport.replace(/\\/g, '/')}`;
-              Linking.openURL(url);
+              if (item.stockReport.startsWith('http://') || item.stockReport.startsWith('https://')) {
+                Linking.openURL(item.stockReport);
+              } else {
+                const url = `${BASE_URL.replace('/api', '')}/${item.stockReport.replace(/\\/g, '/')}`;
+                Linking.openURL(url);
+              }
             }}
           >
             <Text style={styles.reportBtnText}>📄  View Stock Report</Text>

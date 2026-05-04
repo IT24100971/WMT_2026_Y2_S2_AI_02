@@ -7,7 +7,7 @@ import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, Linking, Alert
 } from 'react-native';
-import { BASE_URL } from '../../context/AuthContext';
+import { BASE_URL, useAuth } from '../../context/AuthContext';
 
 const SERVER_URL = BASE_URL.replace('/api', '');
 
@@ -22,6 +22,7 @@ const InfoRow = ({ icon, label, value }) => (
 );
 
 export default function ViewSupplierScreen({ route, navigation }) {
+  const { user } = useAuth();
   const { supplier } = route.params;
 
   const hasValidContract =
@@ -31,6 +32,14 @@ export default function ViewSupplierScreen({ route, navigation }) {
 
   const openDocument = () => {
     if (!hasValidContract) return;
+    
+    if (supplier.contractDocument.startsWith('http://') || supplier.contractDocument.startsWith('https://')) {
+      Linking.openURL(supplier.contractDocument).catch(() => {
+        Alert.alert('Error', 'Failed to open the contract document.');
+      });
+      return;
+    }
+
     const cleanPath = supplier.contractDocument.replace(/\\/g, '/');
     const url = `${SERVER_URL}/${cleanPath}`;
     Linking.openURL(url).catch(() => {
@@ -102,7 +111,13 @@ export default function ViewSupplierScreen({ route, navigation }) {
       <View style={styles.actions}>
         <TouchableOpacity
           style={[styles.actionBtn, styles.editBtn]}
-          onPress={() => navigation.navigate('EditSupplier', { supplier })}
+          onPress={() => {
+            if (user?.role !== 'Admin') {
+              Alert.alert('Access Denied', 'Please sign in as admin to do the change');
+            } else {
+              navigation.navigate('EditSupplier', { supplier });
+            }
+          }}
         >
           <Text style={styles.actionBtnText}>✏️  Edit Supplier</Text>
         </TouchableOpacity>

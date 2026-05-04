@@ -160,6 +160,14 @@ export default function EditSupplierScreen({ route, navigation }) {
 
   const openExistingDocument = () => {
     if (!existingDoc) return;
+    
+    if (existingDoc.startsWith('http://') || existingDoc.startsWith('https://')) {
+      Linking.openURL(existingDoc).catch(() => {
+        Alert.alert("Error", "Failed to open document.");
+      });
+      return;
+    }
+
     const url = `${SERVER_URL}/${existingDoc.replace(/\\/g, '/')}`;
     Linking.openURL(url).catch(() => {
       Alert.alert("Error", "Failed to open document.");

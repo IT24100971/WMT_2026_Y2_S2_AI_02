@@ -1,12 +1,20 @@
 const Inventory = require('../models/Inventory');
 const Product = require('../models/Product');
 const multer = require('multer');
-const path = require('path');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 
-const storage = multer.diskStorage({
-  destination: './uploads/reports/',
-  filename: (req, file, cb) => {
-    cb(null, 'stockreport-' + Date.now() + path.extname(file.originalname));
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'wmt_reports',
+    resource_type: 'auto'
   }
 });
 const upload = multer({ storage }).single('stockReport');

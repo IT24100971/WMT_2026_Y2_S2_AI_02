@@ -35,7 +35,7 @@ export default function HomeScreen({ navigation }) {
             onPress={() => navigation.navigate(module.screen)}
           >
             <Text style={styles.cardTitle}>{module.name}</Text>
-            <Text style={styles.cardDesc}>Tap to open {module.student} module</Text>
+            {/* student credit removed */}
           </TouchableOpacity>
         ))}
       </View>
