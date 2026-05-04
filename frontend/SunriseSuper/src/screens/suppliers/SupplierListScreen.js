@@ -5,11 +5,12 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
-import { BASE_URL } from '../../context/AuthContext';
+import { BASE_URL, useAuth } from '../../context/AuthContext';
 
 const SERVER_URL = BASE_URL.replace('/api', '');
 
 export default function SupplierListScreen({ navigation }) {
+  const { user } = useAuth();
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -48,6 +49,10 @@ export default function SupplierListScreen({ navigation }) {
   };
 
   const confirmDelete = (id, name) => {
+    if (user?.role !== 'Admin') {
+      Alert.alert('Access Denied', 'Please sign in as an Admin to do this change.');
+      return;
+    }
     Alert.alert(
       'Delete Supplier',
       `Are you sure you want to delete "${name}"? This action cannot be undone.`,
@@ -63,8 +68,13 @@ export default function SupplierListScreen({ navigation }) {
       Alert.alert('Unavailable', 'No valid contract document found for this supplier.');
       return;
     }
-    const cleanPath = docPath.replace(/\\/g, '/');
-    const url = `${SERVER_URL}/${cleanPath}`;
+    let url;
+    if (docPath.startsWith('http')) {
+      url = docPath;
+    } else {
+      const cleanPath = docPath.replace(/\\/g, '/');
+      url = `${SERVER_URL}/${cleanPath}`;
+    }
     Linking.openURL(url).catch(() => {
       Alert.alert('Error', 'Failed to open document.');
     });
@@ -117,7 +127,13 @@ export default function SupplierListScreen({ navigation }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, styles.editBtn]}
-            onPress={() => navigation.navigate('EditSupplier', { supplier: item })}
+            onPress={() => {
+              if (user?.role !== 'Admin') {
+                Alert.alert('Access Denied', 'Please sign in as an Admin to do this change.');
+                return;
+              }
+              navigation.navigate('EditSupplier', { supplier: item });
+            }}
           >
             <Text style={styles.actionBtnText}>✏️ Edit</Text>
           </TouchableOpacity>
@@ -184,7 +200,13 @@ export default function SupplierListScreen({ navigation }) {
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('AddSupplier')}
+        onPress={() => {
+          if (user?.role !== 'Admin') {
+            Alert.alert('Access Denied', 'Please sign in as an Admin to do this change.');
+            return;
+          }
+          navigation.navigate('AddSupplier');
+        }}
       >
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
