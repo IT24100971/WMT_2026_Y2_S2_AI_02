@@ -48,7 +48,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/complaints', complaintRoutes);
-app.use('/api/grn', grnRoutes);
+app.use('/api/grns', grnRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
