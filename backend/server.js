@@ -12,6 +12,10 @@ const app = express();
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
+const path = require('path');
+
+// Serve uploads directory statically for old files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)

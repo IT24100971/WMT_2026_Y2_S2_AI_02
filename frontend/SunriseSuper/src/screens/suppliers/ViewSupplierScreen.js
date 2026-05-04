@@ -31,8 +31,13 @@ export default function ViewSupplierScreen({ route, navigation }) {
 
   const openDocument = () => {
     if (!hasValidContract) return;
-    const cleanPath = supplier.contractDocument.replace(/\\/g, '/');
-    const url = `${SERVER_URL}/${cleanPath}`;
+    let url;
+    if (supplier.contractDocument.startsWith('http')) {
+      url = supplier.contractDocument;
+    } else {
+      const cleanPath = supplier.contractDocument.replace(/\\/g, '/');
+      url = `${SERVER_URL}/${cleanPath}`;
+    }
     Linking.openURL(url).catch(() => {
       Alert.alert('Error', 'Failed to open the contract document.');
     });

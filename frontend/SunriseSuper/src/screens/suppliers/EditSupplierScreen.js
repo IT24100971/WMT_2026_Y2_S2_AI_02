@@ -153,7 +153,12 @@ export default function EditSupplierScreen({ route, navigation }) {
 
   const openExistingDocument = () => {
     if (!existingDoc) return;
-    const url = `${SERVER_URL}/${existingDoc.replace(/\\/g, '/')}`;
+    let url;
+    if (existingDoc.startsWith('http')) {
+      url = existingDoc;
+    } else {
+      url = `${SERVER_URL}/${existingDoc.replace(/\\/g, '/')}`;
+    }
     Linking.openURL(url).catch(() => {
       Alert.alert("Error", "Failed to open document.");
     });

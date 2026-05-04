@@ -63,8 +63,13 @@ export default function SupplierListScreen({ navigation }) {
       Alert.alert('Unavailable', 'No valid contract document found for this supplier.');
       return;
     }
-    const cleanPath = docPath.replace(/\\/g, '/');
-    const url = `${SERVER_URL}/${cleanPath}`;
+    let url;
+    if (docPath.startsWith('http')) {
+      url = docPath;
+    } else {
+      const cleanPath = docPath.replace(/\\/g, '/');
+      url = `${SERVER_URL}/${cleanPath}`;
+    }
     Linking.openURL(url).catch(() => {
       Alert.alert('Error', 'Failed to open document.');
     });
